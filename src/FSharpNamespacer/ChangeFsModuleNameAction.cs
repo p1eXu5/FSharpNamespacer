@@ -12,13 +12,13 @@ namespace FSharpNamespacer
             if (fsModule.IsModule)
             {
                 var suggested = String.Join(".", fsModule.SuggestedFsModuleName);
-                DisplayText = $"Change module name to {suggested}";
+                DisplayText = $"Rename to {suggested}";
                 ReplacingText = $"module {suggested}";
             }
             else
             {
                 var suggested = String.Join(".", fsModule.SuggestedFsModuleName.Take(fsModule.SuggestedFsModuleName.Length - 1));
-                DisplayText = $"Change namespace name to {suggested}";
+                DisplayText = $"Rename to {suggested}";
                 ReplacingText = $"namespace {suggested}";
             }
         }

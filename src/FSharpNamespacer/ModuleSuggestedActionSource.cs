@@ -113,6 +113,7 @@ namespace FSharpNamespacer
 
                 fsModule = new FsSuggested
                 {
+                    IsModule = fsModule.IsModule,
                     Extend = fsModule.Extend,
                     Ind = fsModule.Ind,
                     FsModuleName = fsModule.FsModuleName,

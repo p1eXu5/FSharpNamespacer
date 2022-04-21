@@ -30,7 +30,7 @@ namespace FSharpNamespacer
         /// <summary>
         /// FSharpNamespacerPackage GUID string.
         /// </summary>
-        public const string PackageGuidString = "557fc427-4a63-4981-97d0-c6602b65a0b6";
+        public const string PackageGuidString = "146bd79f-257c-4d4a-960d-c9558090cf89";
 
         #region Package Members
 
