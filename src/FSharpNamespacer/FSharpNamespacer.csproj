@@ -46,10 +46,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AsyncModuleSuggestedActionSource.cs" />
     <Compile Include="ChangeFsModuleNameAction.cs" />
     <Compile Include="ChangeFsModuleNameActionBase.cs" />
     <Compile Include="ChangeFsModuleScopeAction.cs" />
-    <Compile Include="ModuleSuggestedActionSource.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FSharpNamespacerPackage.cs" />

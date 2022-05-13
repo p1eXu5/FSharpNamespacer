@@ -6,7 +6,7 @@ namespace FSharpNamespacer
 {
     internal class ChangeFsModuleNameAction : ChangeFsModuleNameActionBase
     {
-        public ChangeFsModuleNameAction(ITrackingSpan trackingSpan, ModuleSuggestedActionSource.FsSuggested fsModule)
+        public ChangeFsModuleNameAction(ITrackingSpan trackingSpan, AsyncModuleSuggestedActionSource.FsSuggested fsModule)
             : base(trackingSpan)
         {
             if (fsModule.IsModule)

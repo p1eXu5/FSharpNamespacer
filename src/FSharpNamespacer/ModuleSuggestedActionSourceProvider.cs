@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.Utilities;
 using System;
 using System.ComponentModel.Composition;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace FSharpNamespacer
 {
@@ -26,6 +27,7 @@ namespace FSharpNamespacer
         [Import(typeof(SVsServiceProvider))]
 		private IServiceProvider serviceProvider = null;
 
+        internal DTE Dte { get; private set; }
 
         public ISuggestedActionsSource CreateSuggestedActionsSource(ITextView textView, ITextBuffer textBuffer)
         {
@@ -36,17 +38,12 @@ namespace FSharpNamespacer
 
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            var dte = serviceProvider.GetService(typeof(DTE)) as DTE;
+            DTE dte = serviceProvider.GetService(typeof(DTE)) as DTE;
             Assumes.Present(dte);
 
-            var projectFileName = dte.ActiveDocument?.ProjectItem?.ContainingProject.FileName;
+            Dte = dte;
 
-            if (string.IsNullOrWhiteSpace(projectFileName))
-            {
-                return null;
-            }
-
-            return new ModuleSuggestedActionSource(this, textView, textBuffer, projectFileName);
+            return new AsyncModuleSuggestedActionSource(this, textBuffer);
         }
     }
 }
