@@ -9,14 +9,14 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 
-namespace FSharpNamespacer
+namespace FSharpNamespacer.Actions
 {
-    public abstract class ChangeFsModuleNameActionBase : ISuggestedAction
+    public abstract class FsScopeActionBase : ISuggestedAction
     {
         private readonly ITrackingSpan _trackingSpan;
         private readonly ITextSnapshot _snapshot;
 
-        protected ChangeFsModuleNameActionBase(ITrackingSpan trackingSpan)
+        protected FsScopeActionBase(ITrackingSpan trackingSpan)
         {
             _trackingSpan = trackingSpan;
             _snapshot = trackingSpan.TextBuffer.CurrentSnapshot;

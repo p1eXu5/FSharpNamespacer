@@ -1,15 +1,18 @@
-﻿using Microsoft.VisualStudio.Text;
+﻿using FSharpNamespacer.Models;
+using Microsoft.VisualStudio.Text;
 using System;
 using System.Linq;
+using FSharpNamespacer;
+using FSharpNamespacer.Actions;
 
-namespace FSharpNamespacer
+namespace FSharpNamespacer.Actions
 {
-    internal class ChangeFsModuleScopeAction : ChangeFsModuleNameActionBase
+    internal class ChangeFsScopeAction : FsScopeActionBase
     {
-        public ChangeFsModuleScopeAction(ITrackingSpan trackingSpan, AsyncModuleSuggestedActionSource.IFsModule fsModule)
+        public ChangeFsScopeAction(ITrackingSpan trackingSpan, IFsScope fsModule)
             : base(trackingSpan)
         {
-            if (fsModule.IsModule)
+            if (FsScopeType.Module == fsModule.FsScopeType)
             {
                 var suggested = String.Join(".", fsModule.SuggestedFsModuleName.Take(fsModule.SuggestedFsModuleName.Length - 1));
                 DisplayText = $"Change to `namespace {suggested}`";
