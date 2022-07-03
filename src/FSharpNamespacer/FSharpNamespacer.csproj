@@ -50,13 +50,8 @@
     <Compile Include="Actions\ChangeToModuleInsteadNamespaceAction.cs" />
     <Compile Include="Actions\ChangeToNamespaceAction.cs" />
     <Compile Include="Actions\ChangeToNamespaceInsteadModuleAction.cs" />
-    <Compile Include="Actions\InsertFsModuleAction.cs" />
-    <Compile Include="Actions\InsertFsNamespaceAction.cs" />
-    <Compile Include="Actions\RenameToFileModuleAction.cs" />
     <Compile Include="AsyncModuleSuggestedActionSource.cs" />
-    <Compile Include="Actions\RenameFsScopeNameAction.cs" />
     <Compile Include="Actions\FsScopeActionBase.cs" />
-    <Compile Include="Actions\ChangeFsScopeAction.cs" />
     <Compile Include="Models.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

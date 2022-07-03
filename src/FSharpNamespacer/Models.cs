@@ -71,10 +71,4 @@ namespace FSharpNamespacer.Models
 
         public bool IsNotNamespaceName => !IsNamespaceName;
     }
-
-    [Obsolete("Deprecated")]
-    internal class FsInvalidScope : FsScope
-    {
-    }
-
 }
