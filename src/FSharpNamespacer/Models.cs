@@ -1,9 +1,6 @@
-﻿using Microsoft.VisualStudio.Text;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.VisualStudio.Text;
 
 namespace FSharpNamespacer.Models
 {
@@ -25,16 +22,58 @@ namespace FSharpNamespacer.Models
     }
 
 
-    internal class FsScopeBase : IFsScope
+    internal class FsScope : IFsScope
     {
+        private bool? _isFileModuleName;
+        private bool? _isNamespaceName;
+
         public FsScopeType FsScopeType { get; internal set; }
         public SnapshotSpan Range { get; internal set; }
         public int NameStartIndex { get; internal set; }
         public string[] FsModuleOrNamespaceName { get; internal set; }
         public string[] SuggestedFsModuleName { get; set; }
+
+        public bool IsModuleScope => FsScopeType == FsScopeType.Module;
+        public bool IsNotModuleScope => !IsModuleScope;
+
+        public bool IsNamespaceScope => FsScopeType == FsScopeType.Namespace;
+        public bool IsNotNamespaceScope => !IsNamespaceScope;
+
+        public bool IsFileModuleName
+        {
+            get
+            {
+                if (_isFileModuleName.HasValue)
+                {
+                    return _isFileModuleName.Value;
+                }
+
+                _isFileModuleName = FsModuleOrNamespaceName.SequenceEqual(SuggestedFsModuleName);
+                return _isFileModuleName.Value;
+            }
+        }
+
+        public bool IsNotFileModuleName => !IsFileModuleName;
+
+        public bool IsNamespaceName
+        {
+            get
+            {
+                if (_isNamespaceName.HasValue)
+                {
+                    return _isNamespaceName.Value;
+                }
+
+                _isNamespaceName = FsModuleOrNamespaceName.SequenceEqual(SuggestedFsModuleName.Take(SuggestedFsModuleName.Length - 1));
+                return _isNamespaceName.Value;
+            }
+        }
+
+        public bool IsNotNamespaceName => !IsNamespaceName;
     }
 
-    internal class FsInvalidScope : FsScopeBase
+    [Obsolete("Deprecated")]
+    internal class FsInvalidScope : FsScope
     {
     }
 

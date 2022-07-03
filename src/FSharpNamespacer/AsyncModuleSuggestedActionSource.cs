@@ -1,18 +1,16 @@
-﻿using FSharpNamespacer.Models;
+﻿using FSharpNamespacer.Actions;
+using FSharpNamespacer.Models;
 using Microsoft;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Editor;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using FSharpNamespacer.Actions;
 
 namespace FSharpNamespacer
 {
@@ -21,7 +19,7 @@ namespace FSharpNamespacer
         private ModuleSuggestedActionSourceProvider _moduleSuggestedActionSourceProvider;
         private ITextBuffer _textBuffer;
 
-        public AsyncModuleSuggestedActionSource( ModuleSuggestedActionSourceProvider moduleSuggestedActionSourceProvider, 
+        public AsyncModuleSuggestedActionSource(ModuleSuggestedActionSourceProvider moduleSuggestedActionSourceProvider,
                                                  ITextBuffer textBuffer)
         {
             _moduleSuggestedActionSourceProvider = moduleSuggestedActionSourceProvider;
@@ -32,72 +30,84 @@ namespace FSharpNamespacer
         public event EventHandler<EventArgs> SuggestedActionsChanged;
 #pragma warning restore CS0067
 
-        public Task<ISuggestedActionCategorySet> GetSuggestedActionCategoriesAsync( ISuggestedActionCategorySet requestedActionCategories, 
-                                                                                    SnapshotSpan range, 
+        public Task<ISuggestedActionCategorySet> GetSuggestedActionCategoriesAsync(ISuggestedActionCategorySet requestedActionCategories,
+                                                                                    SnapshotSpan range,
                                                                                     CancellationToken cancellationToken)
         {
             return Task.FromResult(requestedActionCategories);
         }
 
-        public IEnumerable<SuggestedActionSet> GetSuggestedActions( ISuggestedActionCategorySet requestedActionCategories, 
-                                                                    SnapshotSpan range, 
+        public IEnumerable<SuggestedActionSet> GetSuggestedActions(ISuggestedActionCategorySet requestedActionCategories,
+                                                                    SnapshotSpan range,
                                                                     CancellationToken cancellationToken
-        ) {
+        )
+        {
             return null;
         }
 
-        public async Task GetSuggestedActionsAsync( ISuggestedActionCategorySet requestedActionCategories, 
-                                              SnapshotSpan range, 
-                                              ImmutableArray<ISuggestedActionSetCollector> suggestedActionSetCollectors, 
+        public async Task GetSuggestedActionsAsync(ISuggestedActionCategorySet requestedActionCategories,
+                                              SnapshotSpan range,
+                                              ImmutableArray<ISuggestedActionSetCollector> suggestedActionSetCollectors,
                                               CancellationToken cancellationToken)
         {
-            var (res, fsModule) = await CanModifyModuleNameAsync(range);
+            (bool canAddAction, FsScope fsScope) = await CanModifyModuleNameAsync(range);
 
-            if (res) 
+            if (canAddAction)
             {
-                void AddActions(params ISuggestedAction[] actions)
+                void AddActions(string categoryName, params ISuggestedAction[] actions)
                 =>
                     suggestedActionSetCollectors[0]
                         .Add(new SuggestedActionSet(
-                            "F# Category",
+                            categoryName,
                             actions,
-                            "F# Title"));
+                            categoryName));
 
 
                 ITrackingSpan trackingSpan = range.Snapshot.CreateTrackingSpan(range, SpanTrackingMode.EdgeInclusive);
 
-                var changeFsScopeAction = new ChangeFsScopeAction(trackingSpan, fsModule);
+                List<ISuggestedAction> moduleSuggestedActions = new List<ISuggestedAction>(4);
+                List<ISuggestedAction> namespaceSuggestedActions = new List<ISuggestedAction>(4);
 
-                if (fsModule is FsInvalidScope fsInvalidScope) 
+                void TryAddAction(List<ISuggestedAction> suggestedActionList, Func<ISuggestedAction> suggestedAction, Predicate<FsScope> predicate)
                 {
-                    var renameFsScopeNameAction = new RenameFsScopeNameAction(trackingSpan, fsInvalidScope);
-                    AddActions(renameFsScopeNameAction, changeFsScopeAction);
-                }
-                else if (fsModule is FsScopeBase fsScope) 
-                {
-                    if (fsScope.FsScopeType == FsScopeType.Undefined) 
+                    if (predicate(fsScope))
                     {
-                        // TODO: add addFsModuleAction and addFsNamespaceAction
-                        var insertNamespaceAction = new InsertFsNamespaceAction(trackingSpan, fsModule);
-                        var insertModuleAction = new InsertFsModuleAction(trackingSpan, fsModule);
-
-                        AddActions(insertNamespaceAction, insertModuleAction);
-                    }
-                    else 
-                    {
-                        AddActions(changeFsScopeAction);
+                        suggestedActionList.Add(suggestedAction());
                     }
                 }
 
-                //suggestedActionSetCollectors[0].Complete();
+                TryAddAction(
+                    moduleSuggestedActions,
+                    () => new ChangeToFileModuleAction(trackingSpan, fsScope),
+                    fs => fs.IsNotModuleScope || fs.IsNotFileModuleName || (fs.IsModuleScope && fs.IsNotFileModuleName));
+
+                TryAddAction(
+                    moduleSuggestedActions,
+                    () => new ChangeToModuleInsteadNamespaceAction(trackingSpan, fsScope),
+                    fs => fs.IsNotModuleScope || fs.IsNotNamespaceName || (fs.IsModuleScope && fs.IsNotNamespaceName));
+
+
+                TryAddAction(
+                    namespaceSuggestedActions,
+                    () => new ChangeToNamespaceAction(trackingSpan, fsScope),
+                    fs => fs.IsNotNamespaceScope || fs.IsNotNamespaceName || (fs.IsNamespaceScope && fs.IsNotNamespaceName));
+
+                TryAddAction(
+                    namespaceSuggestedActions,
+                    () => new ChangeToNamespaceInsteadModuleAction(trackingSpan, fsScope),
+                    fs => fs.IsNotNamespaceScope || fs.IsNotFileModuleName || fs.IsNamespaceScope && fs.IsNotFileModuleName);
+
+                AddActions("F# Suggested Module Names", moduleSuggestedActions.ToArray());
+                AddActions("F# Suggested Namespace Names", namespaceSuggestedActions.ToArray());
             }
         }
 
 
-        public async Task<bool> HasSuggestedActionsAsync( ISuggestedActionCategorySet requestedActionCategories, 
-                                                          SnapshotSpan range, 
+        public async Task<bool> HasSuggestedActionsAsync(ISuggestedActionCategorySet requestedActionCategories,
+                                                          SnapshotSpan range,
                                                           CancellationToken cancellationToken
-        ) {
+        )
+        {
             var (res, _) = await CanModifyModuleNameAsync(range);
             return res;
         }
@@ -113,12 +123,11 @@ namespace FSharpNamespacer
         {
         }
 
-
-        private async Task<(bool, IFsScope)> CanModifyModuleNameAsync(SnapshotSpan range)
+        private async Task<(bool canModifyModuleName, FsScope fsScope)> CanModifyModuleNameAsync(SnapshotSpan range)
         {
-            if ( TryGetTextDocument(out ITextDocument doc)
+            if (TryGetTextDocument(out ITextDocument doc)
                  && Path.GetExtension(doc.FilePath) == ".fs"
-                 && CheckCaretLine(range, out var f) ) 
+                 && CheckCaretLine(range, out var f))
             {
                 var fsModule = f;
 
@@ -129,10 +138,10 @@ namespace FSharpNamespacer
                 string[] filePathUriSegments = new Uri(doc.FilePath, UriKind.Absolute).Segments; // include .fs file
                 string[] projectPathUriSegments = new Uri(projectFileName, UriKind.Absolute).Segments; // include .fsproj file
 
-                if (projectPathUriSegments.Length > filePathUriSegments.Length) {
+                if (projectPathUriSegments.Length > filePathUriSegments.Length)
+                {
                     return (false, null);
                 }
-
 
                 int i = 0;
 
@@ -144,40 +153,17 @@ namespace FSharpNamespacer
                     .Select(s => s.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, Path.VolumeSeparatorChar))
                     .ToArray();
 
-
                 suggestedFsModuleNameSegments[suggestedFsModuleNameSegments.Length - 1] =
                     suggestedFsModuleNameSegments[suggestedFsModuleNameSegments.Length - 1]
                         .Substring(0, suggestedFsModuleNameSegments[suggestedFsModuleNameSegments.Length - 1].Length - 3);
 
                 fsModule.SuggestedFsModuleName = suggestedFsModuleNameSegments;
 
-                switch (fsModule.FsScopeType) {
-                    case FsScopeType.Undefined:
-
-                    case FsScopeType.Module 
-                        when fsModule.FsModuleOrNamespaceName.SequenceEqual(suggestedFsModuleNameSegments):
-
-                    case FsScopeType.Namespace 
-                        when fsModule.FsModuleOrNamespaceName.SequenceEqual(suggestedFsModuleNameSegments.Take(suggestedFsModuleNameSegments.Length - 1)):
-
-                            return (true, fsModule);
-
-                    default:
-                        fsModule = new FsInvalidScope {
-                            FsScopeType = fsModule.FsScopeType,
-                            Range = fsModule.Range,
-                            NameStartIndex = fsModule.NameStartIndex,
-                            FsModuleOrNamespaceName = fsModule.FsModuleOrNamespaceName,
-                            SuggestedFsModuleName = suggestedFsModuleNameSegments,
-                        };
-
-                        return (true, fsModule);
-                }
+                return (true, fsModule);
             }
 
             return (false, null);
         }
-
 
         private bool TryGetTextDocument(out ITextDocument doc)
             => _moduleSuggestedActionSourceProvider.TextDocumentFactoryService.TryGetTextDocument(_textBuffer, out doc);
@@ -188,13 +174,15 @@ namespace FSharpNamespacer
             return _moduleSuggestedActionSourceProvider.Dte.ActiveDocument?.ProjectItem?.ContainingProject.FileName;
         }
 
-        private bool CheckCaretLine(SnapshotSpan range, out IFsScope fsModule)
+        private bool CheckCaretLine(SnapshotSpan range, out FsScope fsModule)
         {
             fsModule = default;
 
-            if (range.IsEmpty) {
+            if (range.IsEmpty)
+            {
                 fsModule =
-                new FsScopeBase {
+                new FsScope
+                {
                     FsScopeType = FsScopeType.Undefined,
                     Range = range,
                     NameStartIndex = 0,
@@ -209,7 +197,8 @@ namespace FSharpNamespacer
             bool isNamespace = line.StartsWith("namespace"); // ignore trailing spaces
 
 
-            if (!(isModule || isNamespace) || line.Contains("=")) {
+            if (!(isModule || isNamespace) || line.Contains("="))
+            {
                 return false;
             }
 
@@ -227,7 +216,8 @@ namespace FSharpNamespacer
                 line.Substring(nameStartIndex).Split('.').Select(s => s.Trim()).Where(s => !String.IsNullOrEmpty(s)).ToArray();
 
             fsModule =
-                new FsScopeBase {
+                new FsScope
+                {
                     FsScopeType = isModule ? FsScopeType.Module : FsScopeType.Namespace,
                     Range = range,
                     NameStartIndex = nameStartIndex,
@@ -235,7 +225,6 @@ namespace FSharpNamespacer
                 };
             return true;
         }
-
 
         private enum Suggestion
         {
