@@ -17,6 +17,7 @@
     <RootNamespace>FSharpNamespacer</RootNamespace>
     <AssemblyName>FSharpNamespacer</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <RuntimeIdentifier>win</RuntimeIdentifier>
     <GeneratePkgDefFile>true</GeneratePkgDefFile>
     <UseCodebase>true</UseCodebase>
     <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
@@ -52,7 +53,9 @@
     <Compile Include="Actions\ChangeToNamespaceInsteadModuleAction.cs" />
     <Compile Include="AsyncModuleSuggestedActionSource.cs" />
     <Compile Include="Actions\FsScopeActionBase.cs" />
-    <Compile Include="Models.cs" />
+    <Compile Include="Models\FsScopeType.cs" />
+    <Compile Include="Models\IFsScope.cs" />
+    <Compile Include="Models\FsScope.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FSharpNamespacerPackage.cs" />

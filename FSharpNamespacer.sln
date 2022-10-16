@@ -7,6 +7,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1ADFFB33-FE4
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpNamespacer", "src\FSharpNamespacer\FSharpNamespacer.csproj", "{6B82A95A-6EA5-418B-B895-9F22BFD170A6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{D5048F9E-4BFB-4E06-9456-97EAF15DDFD2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FSharpNamespacer.Tests", "test\FSharpNamespacer.Tests\FSharpNamespacer.Tests.csproj", "{67149E65-1E61-4A29-BEFD-43CFA40FF38C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,12 +21,17 @@ Global
 		{6B82A95A-6EA5-418B-B895-9F22BFD170A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6B82A95A-6EA5-418B-B895-9F22BFD170A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6B82A95A-6EA5-418B-B895-9F22BFD170A6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67149E65-1E61-4A29-BEFD-43CFA40FF38C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67149E65-1E61-4A29-BEFD-43CFA40FF38C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67149E65-1E61-4A29-BEFD-43CFA40FF38C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67149E65-1E61-4A29-BEFD-43CFA40FF38C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6B82A95A-6EA5-418B-B895-9F22BFD170A6} = {1ADFFB33-FE46-498B-B88F-87678D58070D}
+		{67149E65-1E61-4A29-BEFD-43CFA40FF38C} = {D5048F9E-4BFB-4E06-9456-97EAF15DDFD2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9846CA1F-0791-409E-840E-DF03326D83B8}

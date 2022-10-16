@@ -25,7 +25,7 @@ namespace FSharpNamespacer
         internal ITextDocumentFactoryService TextDocumentFactoryService { get; set; }
 
         [Import(typeof(SVsServiceProvider))]
-		private IServiceProvider serviceProvider = null;
+		private IServiceProvider _serviceProvider = null;
 
         internal DTE Dte { get; private set; }
 
@@ -38,7 +38,7 @@ namespace FSharpNamespacer
 
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            DTE dte = serviceProvider.GetService(typeof(DTE)) as DTE;
+            DTE dte = _serviceProvider.GetService(typeof(DTE)) as DTE;
             Assumes.Present(dte);
 
             Dte = dte;
