@@ -47,10 +47,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Actions\ChangeToFileModuleAction.cs" />
-    <Compile Include="Actions\ChangeToModuleInsteadNamespaceAction.cs" />
+    <Compile Include="Actions\ChangeToModuleAction.cs" />
     <Compile Include="Actions\ChangeToNamespaceAction.cs" />
-    <Compile Include="Actions\ChangeToNamespaceInsteadModuleAction.cs" />
+    <Compile Include="Actions\ChangeToSuggestedModuleAction.cs" />
+    <Compile Include="Actions\ChangeToSuggestedModuleInsteadNamespaceAction.cs" />
+    <Compile Include="Actions\ChangeToSuggestedNamespaceAction.cs" />
+    <Compile Include="Actions\ChangeToSuggestedNamespaceInsteadModuleAction.cs" />
     <Compile Include="AsyncModuleSuggestedActionSource.cs" />
     <Compile Include="Actions\FsScopeActionBase.cs" />
     <Compile Include="Models\FsScopeType.cs" />

@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace FSharpNamespacer
 {
-    public class AsyncModuleSuggestedActionSource : IAsyncSuggestedActionsSource
+    public sealed class AsyncModuleSuggestedActionSource : IAsyncSuggestedActionsSource
     {
         private ModuleSuggestedActionSourceProvider _moduleSuggestedActionSourceProvider;
         private ITextBuffer _textBuffer;
@@ -78,26 +78,41 @@ namespace FSharpNamespacer
                     }
                 }
 
+                // -----------------
+                // module actions
+                // -----------------
                 TryAddAction(
                     moduleSuggestedActions,
-                    () => new ChangeToFileModuleAction(trackingSpan, fsScope),
-                    fs => fs.IsNotModuleScope || fs.IsNotFileModuleName || (fs.IsModuleScope && fs.IsNotFileModuleName));
+                    () => new ChangeToModuleAction(trackingSpan, fsScope),
+                    fs => fs.IsNamespaceScope && fs.IsNameNotEqualToSuggestedModuleName && fs.IsNameNotEqualToSuggestedNamespaceName);
 
                 TryAddAction(
                     moduleSuggestedActions,
-                    () => new ChangeToModuleInsteadNamespaceAction(trackingSpan, fsScope),
-                    fs => fs.IsNotModuleScope || fs.IsNotNamespaceName || (fs.IsModuleScope && fs.IsNotNamespaceName));
+                    () => new ChangeToSuggestedModuleAction(trackingSpan, fsScope),
+                    fs => fs.IsNotModuleScope || fs.IsNameNotEqualToSuggestedModuleName || (fs.IsModuleScope && fs.IsNameNotEqualToSuggestedModuleName));
 
+                TryAddAction(
+                    moduleSuggestedActions,
+                    () => new ChangeToSuggestedModuleInsteadNamespaceAction(trackingSpan, fsScope),
+                    fs => fs.IsNotModuleScope || fs.IsNameNotEqualToSuggestedNamespaceName || (fs.IsModuleScope && fs.IsNameNotEqualToSuggestedNamespaceName));
 
+                // -----------------
+                // namespace actions
+                // -----------------
                 TryAddAction(
                     namespaceSuggestedActions,
                     () => new ChangeToNamespaceAction(trackingSpan, fsScope),
-                    fs => fs.IsNotNamespaceScope || fs.IsNotNamespaceName || (fs.IsNamespaceScope && fs.IsNotNamespaceName));
+                    fs => fs.IsModuleScope && fs.IsNameNotEqualToSuggestedModuleName && fs.IsNameNotEqualToSuggestedNamespaceName);
 
                 TryAddAction(
                     namespaceSuggestedActions,
-                    () => new ChangeToNamespaceInsteadModuleAction(trackingSpan, fsScope),
-                    fs => fs.IsNotNamespaceScope || fs.IsNotFileModuleName || fs.IsNamespaceScope && fs.IsNotFileModuleName);
+                    () => new ChangeToSuggestedNamespaceAction(trackingSpan, fsScope),
+                    fs => fs.IsNotNamespaceScope || fs.IsNameNotEqualToSuggestedNamespaceName || (fs.IsNamespaceScope && fs.IsNameNotEqualToSuggestedNamespaceName));
+
+                TryAddAction(
+                    namespaceSuggestedActions,
+                    () => new ChangeToSuggestedNamespaceInsteadModuleAction(trackingSpan, fsScope),
+                    fs => fs.IsNotNamespaceScope || fs.IsNameNotEqualToSuggestedModuleName || fs.IsNamespaceScope && fs.IsNameNotEqualToSuggestedModuleName);
 
                 AddActions("F# Suggested Module Names", moduleSuggestedActions.ToArray());
                 AddActions("F# Suggested Namespace Names", namespaceSuggestedActions.ToArray());

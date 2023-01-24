@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.Text;
 
 namespace FSharpNamespacer.Models
 {
-    internal class FsScope : IFsScope
+    internal sealed class FsScope : IFsScope
     {
         private bool? _isFileModuleName;
         private bool? _isNamespaceName;
@@ -26,7 +25,7 @@ namespace FSharpNamespacer.Models
         public bool IsNamespaceScope => FsScopeType == FsScopeType.Namespace;
         public bool IsNotNamespaceScope => !IsNamespaceScope;
 
-        public bool IsFileModuleName
+        public bool IsNameEqualToSuggestedModuleName
         {
             get
             {
@@ -40,9 +39,9 @@ namespace FSharpNamespacer.Models
             }
         }
 
-        public bool IsNotFileModuleName => !IsFileModuleName;
+        public bool IsNameNotEqualToSuggestedModuleName => !IsNameEqualToSuggestedModuleName;
 
-        public bool IsNamespaceName
+        public bool IsNameEqualToSuggestedNamespaceName
         {
             get
             {
@@ -56,7 +55,7 @@ namespace FSharpNamespacer.Models
             }
         }
 
-        public bool IsNotNamespaceName => !IsNamespaceName;
+        public bool IsNameNotEqualToSuggestedNamespaceName => !IsNameEqualToSuggestedNamespaceName;
 
         /// <summary>
         /// Creates <see cref="FsScope"/> if file is newly created and empty or

@@ -6,21 +6,21 @@ using System.Linq;
 namespace FSharpNamespacer.Actions
 {
     /// <summary>
-    /// Suggestion: <c>`module SuggestedFsModuleName</c>
+    /// Suggestion: <c>`namespace SuggestedFsModuleName</c>
     /// </summary>
-    internal class ChangeToFileModuleAction : FsScopeActionBase
+    internal sealed class ChangeToSuggestedNamespaceInsteadModuleAction : FsScopeActionBase
     {
         /// <summary>
-        /// <inheritdoc cref="ChangeToNamespaceAction"/>
+        /// <inheritdoc cref="ChangeToSuggestedNamespaceInsteadModuleAction"/>
         /// </summary>
         /// <param name="trackingSpan"></param>
         /// <param name="fsModule"></param>
-        public ChangeToFileModuleAction(ITrackingSpan trackingSpan, IFsScope fsModule)
+        public ChangeToSuggestedNamespaceInsteadModuleAction(ITrackingSpan trackingSpan, IFsScope fsModule)
             : base(trackingSpan)
         {
             var suggested = String.Join(".", fsModule.SuggestedFsModuleName);
-            DisplayText = $"module {suggested}";
-            ReplacingText = $"module {suggested}";
+            DisplayText = $"namespace {suggested}";
+            ReplacingText = $"namespace {suggested}";
         }
 
         public override string DisplayText { get; }

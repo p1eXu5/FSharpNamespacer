@@ -23,12 +23,20 @@ namespace FSharpNamespacer.Actions
         }
 
         public bool HasActionSets { get; } = false;
+
+        /// <summary>
+        /// Used in context menu.
+        /// </summary>
         public abstract string DisplayText { get; }
+
         public ImageMoniker IconMoniker { get; } = default;
         public string IconAutomationText { get; } = null;
         public string InputGestureText { get; } = null;
         public bool HasPreview { get; } = true;
 
+        /// <summary>
+        /// Using for preview and replacement.
+        /// </summary>
         protected abstract string ReplacingText { get; }
 
         public void Dispose()

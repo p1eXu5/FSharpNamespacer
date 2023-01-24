@@ -5,21 +5,21 @@ using Microsoft.VisualStudio.Text;
 namespace FSharpNamespacer.Actions
 {
     /// <summary>
-    /// Suggestion: <c>`namespace FsModuleOrNamespaceName</c>
+    /// Suggestion: <c>`module FsModuleOrNamespaceName</c>
     /// </summary>
-    internal sealed class ChangeToNamespaceAction : FsScopeActionBase
+    internal sealed class ChangeToModuleAction : FsScopeActionBase
     {
         /// <summary>
-        /// <inheritdoc cref="ChangeToNamespaceAction"/>
+        /// <inheritdoc cref="ChangeToModuleAction"/>
         /// </summary>
         /// <param name="trackingSpan"></param>
         /// <param name="fsModule"></param>
-        public ChangeToNamespaceAction(ITrackingSpan trackingSpan, IFsScope fsModule)
+        public ChangeToModuleAction(ITrackingSpan trackingSpan, IFsScope fsModule)
             : base(trackingSpan)
         {
             var suggested = String.Join(".", fsModule.FsModuleOrNamespaceName);
-            DisplayText = $"namespace {suggested}";
-            ReplacingText = $"namespace {suggested}";
+            DisplayText = $"module {suggested}";
+            ReplacingText = $"module {suggested}";
         }
 
         public override string DisplayText { get; }
