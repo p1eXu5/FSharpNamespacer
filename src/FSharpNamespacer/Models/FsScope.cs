@@ -81,8 +81,9 @@ namespace FSharpNamespacer.Models
                 return true;
             }
 
+            // get first line in selection
+            string line = range.Snapshot.Lines.First(l => l.Start <= range.Start && range.Start < l.End).GetText();
 
-            string line = range.GetText();
             bool isModule = line.StartsWith("module"); // ignore trailing spaces
             bool isNamespace = line.StartsWith("namespace"); // ignore trailing spaces
 
