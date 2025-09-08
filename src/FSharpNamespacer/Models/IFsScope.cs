@@ -1,12 +1,15 @@
-﻿using Microsoft.VisualStudio.Text;
-
-namespace FSharpNamespacer.Models
+﻿namespace FSharpNamespacer.Models
 {
     internal interface IFsScope
     {
+        /// <summary>
+        /// Module, namespace or undefined.
+        /// </summary>
         FsScopeType FsScopeType { get; }
 
-
+        /// <summary>
+        /// Fist not whitespace character in a line with <see cref="FsModuleOrNamespaceName"/>.
+        /// </summary>
         int NameStartIndex { get; }
 
         /// <summary>
