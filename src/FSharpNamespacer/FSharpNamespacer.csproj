@@ -53,6 +53,7 @@
     <Compile Include="Actions\ChangeToSuggestedModuleInsteadNamespaceAction.cs" />
     <Compile Include="Actions\ChangeToSuggestedNamespaceAction.cs" />
     <Compile Include="Actions\ChangeToSuggestedNamespaceInsteadModuleAction.cs" />
+    <Compile Include="Actions\FsScopeActionBaseEqualityComparer.cs" />
     <Compile Include="AsyncModuleSuggestedActionSource.cs" />
     <Compile Include="Actions\FsScopeActionBase.cs" />
     <Compile Include="Models\FsScopeType.cs" />
