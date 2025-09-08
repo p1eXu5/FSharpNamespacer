@@ -46,10 +46,11 @@ namespace FSharpNamespacer
             return null;
         }
 
-        public async Task GetSuggestedActionsAsync(ISuggestedActionCategorySet requestedActionCategories,
-                                              SnapshotSpan range,
-                                              ImmutableArray<ISuggestedActionSetCollector> suggestedActionSetCollectors,
-                                              CancellationToken cancellationToken)
+        public async Task GetSuggestedActionsAsync(
+            ISuggestedActionCategorySet requestedActionCategories,
+            SnapshotSpan range,
+            ImmutableArray<ISuggestedActionSetCollector> suggestedActionSetCollectors,
+            CancellationToken cancellationToken)
         {
             (bool canAddAction, FsScope fsScope) = await CanModifyModuleNameAsync(range);
 
@@ -63,8 +64,10 @@ namespace FSharpNamespacer
                             actions,
                             categoryName));
 
-
-                ITrackingSpan trackingSpan = range.Snapshot.CreateTrackingSpan(range, SpanTrackingMode.EdgeInclusive);
+                ITrackingSpan trackingSpan = fsScope.TextSnapshotLine.Snapshot.CreateTrackingSpan(
+                    fsScope.TextSnapshotLine.Start,
+                    fsScope.TextSnapshotLine.End,
+                    SpanTrackingMode.EdgeInclusive);
 
                 List<FsScopeActionBase> moduleSuggestedActions = new List<FsScopeActionBase>(4);
                 List<FsScopeActionBase> namespaceSuggestedActions = new List<FsScopeActionBase>(4);

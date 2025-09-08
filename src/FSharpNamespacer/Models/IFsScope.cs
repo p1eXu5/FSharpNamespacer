@@ -1,4 +1,6 @@
-﻿namespace FSharpNamespacer.Models
+﻿using Microsoft.VisualStudio.Text;
+
+namespace FSharpNamespacer.Models
 {
     internal interface IFsScope
     {
@@ -21,5 +23,7 @@
         /// Suggested module name.
         /// </summary>
         string[] SuggestedFsModuleName { get; }
+
+        ITextSnapshotLine TextSnapshotLine { get; }
     }
 }

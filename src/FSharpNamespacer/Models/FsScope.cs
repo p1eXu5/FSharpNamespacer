@@ -21,6 +21,8 @@ namespace FSharpNamespacer.Models
         
         public string[] SuggestedFsModuleName { get; private set; } = Array.Empty<string>();
 
+        public ITextSnapshotLine TextSnapshotLine { get; private set; }
+
         public bool IsModuleScope => FsScopeType == FsScopeType.Module;
 
         public bool IsNotModuleScope => !IsModuleScope;
@@ -75,24 +77,26 @@ namespace FSharpNamespacer.Models
             if (range.IsEmpty && range.Start == 0)
             {
                 fsScope =
-                new FsScope
-                {
-                    FsScopeType = FsScopeType.Undefined,
-                    NameStartIndex = 0,
-                    FsModuleOrNamespaceName = Array.Empty<string>(),
-                };
+                    new FsScope
+                    {
+                        FsScopeType = FsScopeType.Undefined,
+                        NameStartIndex = 0,
+                        FsModuleOrNamespaceName = Array.Empty<string>(),
+                        TextSnapshotLine = range.Snapshot.Lines.First(),
+                    };
                 return true;
             }
 
             // get first line in selection
-            string line = range.Snapshot.Lines.Take(100).First(l => l.Start <= range.Start && range.Start < l.End).GetText();
+            ITextSnapshotLine line = range.Snapshot.Lines.First(l => l.Start <= range.Start && range.Start < l.End);
+            string lineText = line.GetText();
 
-            bool isModule = line.StartsWith("module"); // ignore trailing spaces
-            bool isNamespace = line.StartsWith("namespace"); // ignore trailing spaces
+            bool isModule = lineText.StartsWith("module"); // ignore trailing spaces
+            bool isNamespace = lineText.StartsWith("namespace"); // ignore trailing spaces
 
             // skip suggestion if inner module
             // TODO: Add suggestion to transform file-scoped module/namespace to inner module and back
-            if (!(isModule || isNamespace) || line.Contains("="))
+            if (!(isModule || isNamespace) || lineText.Contains("="))
             {
                 return false;
             }
@@ -103,12 +107,12 @@ namespace FSharpNamespacer.Models
                     ? "module".Length
                     : "namespace".Length;
 
-            while (Char.IsWhiteSpace(line[nameStartIndex++]));
+            while (Char.IsWhiteSpace(lineText[nameStartIndex++]));
             --nameStartIndex;
 
             // define name segments
             string[] nameSegments =
-                line
+                lineText
                     .Substring(nameStartIndex)
                     .Split('.')
                     .Select(s => s.Trim())
@@ -120,7 +124,8 @@ namespace FSharpNamespacer.Models
                 {
                     FsScopeType = isModule ? FsScopeType.Module : FsScopeType.Namespace,
                     NameStartIndex = nameStartIndex,
-                    FsModuleOrNamespaceName = nameSegments
+                    FsModuleOrNamespaceName = nameSegments,
+                    TextSnapshotLine = line,
                 };
 
             return true;
