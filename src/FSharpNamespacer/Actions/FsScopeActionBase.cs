@@ -30,8 +30,11 @@ namespace FSharpNamespacer.Actions
         public abstract string DisplayText { get; }
 
         public ImageMoniker IconMoniker { get; } = default;
+
         public string IconAutomationText { get; } = null;
+
         public string InputGestureText { get; } = null;
+
         public bool HasPreview { get; } = true;
 
         /// <summary>
