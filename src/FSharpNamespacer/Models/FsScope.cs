@@ -16,13 +16,17 @@ namespace FSharpNamespacer.Models
         public FsScopeType FsScopeType { get; private set; }
         
         public int NameStartIndex { get; private set; }
+
         public string[] FsModuleOrNamespaceName { get; private set; }
+        
         public string[] SuggestedFsModuleName { get; private set; } = Array.Empty<string>();
 
         public bool IsModuleScope => FsScopeType == FsScopeType.Module;
+
         public bool IsNotModuleScope => !IsModuleScope;
 
         public bool IsNamespaceScope => FsScopeType == FsScopeType.Namespace;
+
         public bool IsNotNamespaceScope => !IsNamespaceScope;
 
         public bool IsNameEqualToSuggestedModuleName
@@ -74,7 +78,6 @@ namespace FSharpNamespacer.Models
                 new FsScope
                 {
                     FsScopeType = FsScopeType.Undefined,
-                    Range = range,
                     NameStartIndex = 0,
                     FsModuleOrNamespaceName = Array.Empty<string>(),
                 };
@@ -82,12 +85,13 @@ namespace FSharpNamespacer.Models
             }
 
             // get first line in selection
-            string line = range.Snapshot.Lines.First(l => l.Start <= range.Start && range.Start < l.End).GetText();
+            string line = range.Snapshot.Lines.Take(100).First(l => l.Start <= range.Start && range.Start < l.End).GetText();
 
             bool isModule = line.StartsWith("module"); // ignore trailing spaces
             bool isNamespace = line.StartsWith("namespace"); // ignore trailing spaces
 
-
+            // skip suggestion if inner module
+            // TODO: Add suggestion to transform file-scoped module/namespace to inner module and back
             if (!(isModule || isNamespace) || line.Contains("="))
             {
                 return false;
@@ -99,7 +103,7 @@ namespace FSharpNamespacer.Models
                     ? "module".Length
                     : "namespace".Length;
 
-            while (Char.IsWhiteSpace(line[nameStartIndex++])) ;
+            while (Char.IsWhiteSpace(line[nameStartIndex++]));
             --nameStartIndex;
 
             // define name segments
@@ -115,7 +119,6 @@ namespace FSharpNamespacer.Models
                 new FsScope
                 {
                     FsScopeType = isModule ? FsScopeType.Module : FsScopeType.Namespace,
-                    Range = range,
                     NameStartIndex = nameStartIndex,
                     FsModuleOrNamespaceName = nameSegments
                 };
