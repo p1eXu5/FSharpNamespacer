@@ -19,8 +19,9 @@ namespace FSharpNamespacer
         private ModuleSuggestedActionSourceProvider _moduleSuggestedActionSourceProvider;
         private ITextBuffer _textBuffer;
 
-        public AsyncModuleSuggestedActionSource(ModuleSuggestedActionSourceProvider moduleSuggestedActionSourceProvider,
-                                                 ITextBuffer textBuffer)
+        public AsyncModuleSuggestedActionSource(
+            ModuleSuggestedActionSourceProvider moduleSuggestedActionSourceProvider,
+            ITextBuffer textBuffer)
         {
             _moduleSuggestedActionSourceProvider = moduleSuggestedActionSourceProvider;
             _textBuffer = textBuffer;
@@ -34,7 +35,7 @@ namespace FSharpNamespacer
                                                                                     SnapshotSpan range,
                                                                                     CancellationToken cancellationToken)
         {
-            return Task.FromResult(requestedActionCategories);
+            return Task.FromResult(requestedActionCategories); // 0 - CODEFIX, 1 - REFACTORING
         }
 
         public IEnumerable<SuggestedActionSet> GetSuggestedActions(ISuggestedActionCategorySet requestedActionCategories,
@@ -65,11 +66,11 @@ namespace FSharpNamespacer
 
                 ITrackingSpan trackingSpan = range.Snapshot.CreateTrackingSpan(range, SpanTrackingMode.EdgeInclusive);
 
-                List<ISuggestedAction> moduleSuggestedActions = new List<ISuggestedAction>(4);
-                List<ISuggestedAction> namespaceSuggestedActions = new List<ISuggestedAction>(4);
+                List<FsScopeActionBase> moduleSuggestedActions = new List<FsScopeActionBase>(4);
+                List<FsScopeActionBase> namespaceSuggestedActions = new List<FsScopeActionBase>(4);
 
-                void TryAddAction( List<ISuggestedAction> suggestedActionList, 
-                                   Func<ISuggestedAction> suggestedAction, 
+                void TryAddAction( List<FsScopeActionBase> suggestedActionList, 
+                                   Func<FsScopeActionBase> suggestedAction, 
                                    Predicate<FsScope> predicate
                 ) {
                     if (predicate(fsScope))
@@ -114,11 +115,21 @@ namespace FSharpNamespacer
                     () => new ChangeToSuggestedNamespaceInsteadModuleAction(trackingSpan, fsScope),
                     fs => fs.IsNotNamespaceScope || fs.IsNameNotEqualToSuggestedModuleName || fs.IsNamespaceScope && fs.IsNameNotEqualToSuggestedModuleName);
 
-                AddActions("F# Suggested Module Names", moduleSuggestedActions.ToArray());
-                AddActions("F# Suggested Namespace Names", namespaceSuggestedActions.ToArray());
+                AddActions(
+                    "F# Suggested Module Names",
+                    moduleSuggestedActions
+                        .Distinct(FsScopeActionBaseEqualityComparer.Default)
+                        .OrderBy(a => a.DisplayText)
+                        .ToArray());
+
+                AddActions(
+                    "F# Suggested Namespace Names",
+                    namespaceSuggestedActions
+                        .Distinct(FsScopeActionBaseEqualityComparer.Default)
+                        .OrderBy(a => a.DisplayText)
+                        .ToArray());
             }
         }
-
 
         public async Task<bool> HasSuggestedActionsAsync(ISuggestedActionCategorySet requestedActionCategories,
                                                           SnapshotSpan range,
