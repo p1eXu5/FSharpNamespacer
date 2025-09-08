@@ -14,7 +14,7 @@ namespace FSharpNamespacer.Models
         { }
 
         public FsScopeType FsScopeType { get; private set; }
-        public SnapshotSpan Range { get; private set; }
+        
         public int NameStartIndex { get; private set; }
         public string[] FsModuleOrNamespaceName { get; private set; }
         public string[] SuggestedFsModuleName { get; private set; } = Array.Empty<string>();

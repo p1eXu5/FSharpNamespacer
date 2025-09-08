@@ -6,7 +6,6 @@ namespace FSharpNamespacer.Models
     {
         FsScopeType FsScopeType { get; }
 
-        SnapshotSpan Range { get; }
 
         int NameStartIndex { get; }
 
