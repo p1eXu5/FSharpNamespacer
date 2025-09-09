@@ -72,6 +72,14 @@ namespace FSharpNamespacer.Models
         /// <returns></returns>
         internal static bool TryCreate(SnapshotSpan range, out FsScope fsScope)
         {
+            /*
+             * In VS Version 17.14.13 F# quick action is triggered on current position
+             * and range length is equal to 1 (as when "Quick Actions and Refactorings..." is chosen from context menu).
+             * 
+             * In testing IDE and earlier versions when `Ctrl + .` is triggering "Quick Actions and Refactorings..."
+             * range contains whole line.
+             */
+
             fsScope = default;
 
             if (range.IsEmpty && range.Start == 0)
@@ -88,7 +96,7 @@ namespace FSharpNamespacer.Models
             }
 
             // get first line in selection
-            ITextSnapshotLine line = range.Snapshot.Lines.First(l => l.Start <= range.Start && range.Start < l.End);
+            ITextSnapshotLine line = range.Snapshot.Lines.First(l => l.Start <= range.Start && (range.Start < l.EndIncludingLineBreak));
             string lineText = line.GetText();
 
             bool isModule = lineText.StartsWith("module"); // ignore trailing spaces
