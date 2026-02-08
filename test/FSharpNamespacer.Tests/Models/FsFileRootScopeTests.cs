@@ -6,7 +6,7 @@ using FluentAssertions;
 namespace FSharpNamespacer.Tests.Models
 {
     [TestClass]
-    public class FsScopeTests
+    public class FsFileRootScopeTests
     {
         [TestMethod]
         public void TryCreate_RangeIsDefault_ReturnsTrue()
@@ -16,7 +16,7 @@ namespace FSharpNamespacer.Tests.Models
 
             // Action:
             // Assert:
-            FsScope.TryCreate(range, out var scope).Should().BeTrue();
+            FsFileRootScope.TryCreate(range, out var scope).Should().BeTrue();
         }
 
         [TestMethod]
@@ -24,7 +24,7 @@ namespace FSharpNamespacer.Tests.Models
         {
             // Arrange:
             SnapshotSpan range = new SnapshotSpan();
-            FsScope.TryCreate(range, out var fsScope);
+            FsFileRootScope.TryCreate(range, out var fsScope);
 
             string fsProjectFilePath = "Z:\\Foo\\Foo.fsproj";
             string fsFilePath        = "Z:\\Foo\\Baz\\Baz.fs";
@@ -39,7 +39,7 @@ namespace FSharpNamespacer.Tests.Models
         {
             // Arrange:
             SnapshotSpan range = new SnapshotSpan();
-            FsScope.TryCreate(range, out var fsScope);
+            FsFileRootScope.TryCreate(range, out var fsScope);
 
             string fsProjectFilePath = "Z:\\Foo\\Foo.fsproj";
             string fsFilePath        = "Z:\\Foo\\Bar\\Bar.Baz.fs";
@@ -62,7 +62,7 @@ namespace FSharpNamespacer.Tests.Models
         {
             // Arrange:
             SnapshotSpan range = new SnapshotSpan();
-            FsScope.TryCreate(range, out var fsScope);
+            FsFileRootScope.TryCreate(range, out var fsScope);
 
             // Action:
             fsScope.TrySetSuggestedFsModuleName(fsProjectFilePath, fsFilePath);

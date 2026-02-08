@@ -5,15 +5,15 @@ using Microsoft.VisualStudio.Text;
 
 namespace FSharpNamespacer.Models
 {
-    internal sealed class FsScope : IFsScope
+    internal sealed class FsFileRootScope : IFsFileRootScope
     {
         private bool? _isFileModuleName;
         private bool? _isNamespaceName;
         
-        private FsScope()
+        private FsFileRootScope()
         { }
 
-        public FsScopeType FsScopeType { get; private set; }
+        public FsModuleOrNamespace FsModuleOrNamespace { get; private set; }
         
         public int NameStartIndex { get; private set; }
 
@@ -23,11 +23,11 @@ namespace FSharpNamespacer.Models
 
         public ITextSnapshotLine TextSnapshotLine { get; private set; }
 
-        public bool IsModuleScope => FsScopeType == FsScopeType.Module;
+        public bool IsFsModule => FsModuleOrNamespace == FsModuleOrNamespace.Module;
 
-        public bool IsNotModuleScope => !IsModuleScope;
+        public bool IsNotModuleScope => !IsFsModule;
 
-        public bool IsNamespaceScope => FsScopeType == FsScopeType.Namespace;
+        public bool IsNamespaceScope => FsModuleOrNamespace == FsModuleOrNamespace.Namespace;
 
         public bool IsNotNamespaceScope => !IsNamespaceScope;
 
@@ -64,13 +64,13 @@ namespace FSharpNamespacer.Models
         public bool IsNameNotEqualToSuggestedNamespaceName => !IsNameEqualToSuggestedNamespaceName;
 
         /// <summary>
-        /// Creates <see cref="FsScope"/> if file is newly created and empty or
+        /// Creates <see cref="FsFileRootScope"/> if file is newly created and empty or
         /// <paramref name="range"/> refers to top level "module" or "namespace".
         /// </summary>
         /// <param name="range"> A span of text in the <see cref="ITextBuffer"/> over which to check for suggested actions. </param>
-        /// <param name="fsScope"></param>
+        /// <param name="instance"></param>
         /// <returns></returns>
-        internal static bool TryCreate(SnapshotSpan range, out FsScope fsScope)
+        internal static bool TryCreate(SnapshotSpan range, out FsFileRootScope instance)
         {
             /*
              * In VS Version 17.14.13 F# quick action is triggered on current position
@@ -80,14 +80,14 @@ namespace FSharpNamespacer.Models
              * range contains whole line.
              */
 
-            fsScope = default;
+            instance = default;
 
             if (range.IsEmpty && range.Start == 0)
             {
-                fsScope =
-                    new FsScope
+                instance =
+                    new FsFileRootScope
                     {
-                        FsScopeType = FsScopeType.Undefined,
+                        FsModuleOrNamespace = FsModuleOrNamespace.Undefined,
                         NameStartIndex = 0,
                         FsModuleOrNamespaceName = Array.Empty<string>(),
                         TextSnapshotLine = range.Snapshot.Lines.First(),
@@ -127,10 +127,10 @@ namespace FSharpNamespacer.Models
                     .Where(s => !String.IsNullOrEmpty(s))
                     .ToArray();
 
-            fsScope =
-                new FsScope
+            instance =
+                new FsFileRootScope
                 {
-                    FsScopeType = isModule ? FsScopeType.Module : FsScopeType.Namespace,
+                    FsModuleOrNamespace = isModule ? FsModuleOrNamespace.Module : FsModuleOrNamespace.Namespace,
                     NameStartIndex = nameStartIndex,
                     FsModuleOrNamespaceName = nameSegments,
                     TextSnapshotLine = line,

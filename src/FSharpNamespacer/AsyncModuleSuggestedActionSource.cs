@@ -52,7 +52,7 @@ namespace FSharpNamespacer
             ImmutableArray<ISuggestedActionSetCollector> suggestedActionSetCollectors,
             CancellationToken cancellationToken)
         {
-            (bool canAddAction, FsScope fsScope) = await CanModifyModuleNameAsync(range);
+            (bool canAddAction, FsFileRootScope fsScope) = await CanModifyModuleNameAsync(range);
 
             if (canAddAction)
             {
@@ -74,7 +74,7 @@ namespace FSharpNamespacer
 
                 void TryAddAction( List<FsScopeActionBase> suggestedActionList, 
                                    Func<FsScopeActionBase> suggestedAction, 
-                                   Predicate<FsScope> predicate
+                                   Predicate<FsFileRootScope> predicate
                 ) {
                     if (predicate(fsScope))
                     {
@@ -93,12 +93,12 @@ namespace FSharpNamespacer
                 TryAddAction(
                     moduleSuggestedActions,
                     () => new ChangeToSuggestedModuleAction(trackingSpan, fsScope),
-                    fs => fs.IsNotModuleScope || fs.IsNameNotEqualToSuggestedModuleName || (fs.IsModuleScope && fs.IsNameNotEqualToSuggestedModuleName));
+                    fs => fs.IsNotModuleScope || fs.IsNameNotEqualToSuggestedModuleName || (fs.IsFsModule && fs.IsNameNotEqualToSuggestedModuleName));
 
                 TryAddAction(
                     moduleSuggestedActions,
                     () => new ChangeToSuggestedModuleInsteadNamespaceAction(trackingSpan, fsScope),
-                    fs => fs.IsNotModuleScope || fs.IsNameNotEqualToSuggestedNamespaceName || (fs.IsModuleScope && fs.IsNameNotEqualToSuggestedNamespaceName));
+                    fs => fs.IsNotModuleScope || fs.IsNameNotEqualToSuggestedNamespaceName || (fs.IsFsModule && fs.IsNameNotEqualToSuggestedNamespaceName));
 
                 // -----------------
                 // namespace actions
@@ -106,7 +106,7 @@ namespace FSharpNamespacer
                 TryAddAction(
                     namespaceSuggestedActions,
                     () => new ChangeToNamespaceAction(trackingSpan, fsScope),
-                    fs => fs.IsModuleScope && fs.IsNameNotEqualToSuggestedModuleName && fs.IsNameNotEqualToSuggestedNamespaceName);
+                    fs => fs.IsFsModule && fs.IsNameNotEqualToSuggestedModuleName && fs.IsNameNotEqualToSuggestedNamespaceName);
 
                 TryAddAction(
                     namespaceSuggestedActions,
@@ -154,11 +154,11 @@ namespace FSharpNamespacer
         {
         }
 
-        private async Task<(bool canModifyModuleName, FsScope fsScope)> CanModifyModuleNameAsync(SnapshotSpan range)
+        private async Task<(bool canModifyModuleName, FsFileRootScope fsScope)> CanModifyModuleNameAsync(SnapshotSpan range)
         {
             if (TryGetTextDocument(out ITextDocument doc)
                  && Path.GetExtension(doc.FilePath) == ".fs"
-                 && FsScope.TryCreate(range, out FsScope fsScope))
+                 && FsFileRootScope.TryCreate(range, out FsFileRootScope fsScope))
             {
                 var projectFileName = await GetProjectFileNameAsync();
                 Assumes.False(string.IsNullOrWhiteSpace(projectFileName));

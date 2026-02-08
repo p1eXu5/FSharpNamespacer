@@ -1,6 +1,6 @@
 ﻿namespace FSharpNamespacer.Models
 {
-    internal enum FsScopeType
+    internal enum FsModuleOrNamespace
     {
         Undefined,
         Module,

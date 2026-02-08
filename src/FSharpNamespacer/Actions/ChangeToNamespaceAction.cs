@@ -14,7 +14,7 @@ namespace FSharpNamespacer.Actions
         /// </summary>
         /// <param name="trackingSpan"></param>
         /// <param name="fsModule"></param>
-        public ChangeToNamespaceAction(ITrackingSpan trackingSpan, IFsScope fsModule)
+        public ChangeToNamespaceAction(ITrackingSpan trackingSpan, IFsFileRootScope fsModule)
             : base(trackingSpan)
         {
             var suggested = String.Join(".", fsModule.FsModuleOrNamespaceName);

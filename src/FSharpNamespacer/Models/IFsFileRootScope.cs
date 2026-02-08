@@ -2,12 +2,12 @@
 
 namespace FSharpNamespacer.Models
 {
-    internal interface IFsScope
+    internal interface IFsFileRootScope
     {
         /// <summary>
         /// Module, namespace or undefined.
         /// </summary>
-        FsScopeType FsScopeType { get; }
+        FsModuleOrNamespace FsModuleOrNamespace { get; }
 
         /// <summary>
         /// Fist not whitespace character in a line with <see cref="FsModuleOrNamespaceName"/>.
