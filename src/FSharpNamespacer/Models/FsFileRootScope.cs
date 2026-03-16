@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.Text;
 
+#nullable enable
+
 namespace FSharpNamespacer.Models
 {
     internal sealed class FsFileRootScope : IFsFileRootScope
@@ -139,7 +141,7 @@ namespace FSharpNamespacer.Models
             return true;
         }
 
-        internal bool TrySetSuggestedFsModuleName(string fsProjectFilePath, string fsFilePath)
+        internal bool TrySetSuggestedFsModuleName(string? fsProjectFilePath, string fsFilePath)
         {
             string[] filePathUriSegments = new Uri(fsFilePath, UriKind.Absolute).Segments; // include .fs file
             string[] projectPathUriSegments = new Uri(fsProjectFilePath, UriKind.Absolute).Segments; // include .fsproj file

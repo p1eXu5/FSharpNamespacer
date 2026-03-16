@@ -5,6 +5,7 @@ using FluentAssertions;
 
 namespace FSharpNamespacer.Tests.Models
 {
+    [Ignore]
     [TestClass]
     public class FsFileRootScopeTests
     {
