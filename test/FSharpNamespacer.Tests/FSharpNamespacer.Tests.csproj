@@ -148,6 +148,7 @@
     <Compile Include="Models\FsFileRootScopeTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utilities\NameParserTests.cs" />
+    <Compile Include="Utilities\PathUtilitiesTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
