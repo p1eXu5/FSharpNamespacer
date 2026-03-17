@@ -5,20 +5,41 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+#nullable enable
+
 namespace FSharpNamespacer.Utilities
 {
     internal static class PathUtilities
     {
-        internal static Queue<string> GetRelativePathSegments(string rootPath, string childItemPath)
+        internal static Queue<string> GetRelativePathSegments(string? rootPath, string childItemPath)
         {
             var queue = new Queue<string>();
+
+            if (string.IsNullOrEmpty(childItemPath))
+            {
+                return queue;
+            }
+
+            var fullChildPath = Path.GetFullPath(childItemPath);
+
+            if (rootPath is null)
+            {
+                var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fullChildPath);
+                var fileNameSegments = fileNameWithoutExtension.Split('.');
+
+                foreach (var segment in fileNameSegments)
+                {
+                    queue.Enqueue(segment);
+                }
+
+                return queue;
+            }
 
             // Get the directory of the root path (the .fsproj file)
             var rootDirectory = Path.GetDirectoryName(rootPath);
 
             // Normalize paths for comparison
             rootDirectory = Path.GetFullPath(rootDirectory).TrimEnd(Path.DirectorySeparatorChar);
-            var fullChildPath = Path.GetFullPath(childItemPath);
 
             // Check if child is under root directory
             bool isUnderRoot = fullChildPath.StartsWith(rootDirectory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
