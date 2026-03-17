@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using FSharpNamespacer.Models;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Operations;
 
@@ -10,18 +11,18 @@ namespace FSharpNamespacer.Utilities
     {
         internal static bool TryGetNameSegments(
             ITextStructureNavigator navigator,
-            SnapshotSpan rangeEnd,
+            SnapshotSpan range,
             TextExtent running,
-            out (Queue<string> nameSegments, bool hasEqualSign) result)
+            out (Queue<(CodeCommentType, string)> nameSegments, bool hasEqualSign) result)
         {
-            var nameSegments = new Queue<string>();
+            var nameSegments = new Queue<(CodeCommentType, string)>();
             bool isComment = false;
             bool isSpacedName = false;
             string runningText;
 
             StringBuilder sb = new StringBuilder();
 
-            while (running.Span.End < rangeEnd.End)
+            while (running.Span.End < range.End)
             {
                 running = navigator.GetExtentOfWord(running.Span.End);
                 bool isSignificant = running.IsSignificant;
@@ -55,7 +56,7 @@ namespace FSharpNamespacer.Utilities
                             // Add any accumulated name before returning
                             if (sb.Length > 0)
                             {
-                                nameSegments.Enqueue(sb.ToString());
+                                nameSegments.Enqueue((CodeCommentType.Code, sb.ToString()));
                             }
                             result = (nameSegments, true);
                             return true;
@@ -69,7 +70,7 @@ namespace FSharpNamespacer.Utilities
                                 return false;
                             }
 
-                            nameSegments.Enqueue(sb.ToString());
+                            nameSegments.Enqueue((CodeCommentType.Code, sb.ToString()));
                             sb.Clear();
                             continue;
                         }
@@ -90,19 +91,32 @@ namespace FSharpNamespacer.Utilities
                     switch ((runningText[0], runningText[1]))
                     {
                         case ('*', ')') when !isSpacedName:
+                            sb.Append('*').Append(')');
+                            nameSegments.Enqueue((CodeCommentType.InlineComment, sb.ToString()));
+                            sb.Clear();
+
                             isComment = false;
+                            
                             continue;
 
                         case ('/', '/') when !isSpacedName:
                             // Add any accumulated name before returning
                             if (sb.Length > 0)
                             {
-                                nameSegments.Enqueue(sb.ToString());
+                                nameSegments.Enqueue((CodeCommentType.Code, sb.ToString()));
                                 sb.Clear();
                             }
 
                             if (nameSegments.Count > 0)
                             {
+                                sb.Append('/').Append('/');
+                                while (running.Span.End < range.End)
+                                {
+                                    running = navigator.GetExtentOfWord(running.Span.End);
+                                    sb.Append(running.Span.GetText());
+                                }
+
+                                nameSegments.Enqueue((CodeCommentType.TerminateComment, sb.ToString()));
                                 result = (nameSegments, false);
                                 return true;
                             }
@@ -111,8 +125,44 @@ namespace FSharpNamespacer.Utilities
                             return false;
 
                         case ('(', '*') when !isSpacedName:
-                            isComment = true;
-                            continue;
+                            if (sb.Length > 0)
+                            {
+                                nameSegments.Enqueue((CodeCommentType.Code, sb.ToString()));
+                                sb.Clear();
+                            }
+
+                            sb.Append('(').Append('*');
+                            running = navigator.GetExtentOfWord(running.Span.End);
+                            var text = running.Span.GetText();
+
+                            while (!(text.Length >= 2 && text[text.Length - 2] == '*' && text[text.Length - 1] == ')') && running.Span.End < range.End)
+                            {
+                                sb.Append(text);
+                                running = navigator.GetExtentOfWord(running.Span.End);
+                                text = running.Span.GetText();
+                            }
+
+                            if (text.Length >= 2 && text[text.Length - 2] == '*' && text[text.Length - 1] == ')')
+                            {
+                                sb.Append(text);
+                                nameSegments.Enqueue((CodeCommentType.InlineComment, sb.ToString()));
+                                sb.Clear();
+
+                                continue;
+                            }
+
+                            sb.Append('*').Append(')');
+                            nameSegments.Enqueue((CodeCommentType.InlineComment, sb.ToString()));
+                            sb.Clear();
+
+                            if (nameSegments.Any(t => t.Item1 == CodeCommentType.Code))
+                            {
+                                result = (nameSegments, false);
+                                return true;
+                            }
+
+                            result = (nameSegments, false);
+                            return false;
 
                         case ('`', '`'):
                             isSpacedName = !isSpacedName;
@@ -132,7 +182,7 @@ namespace FSharpNamespacer.Utilities
                         case ('`', '`', '.') when isSpacedName:
                             isSpacedName = !isSpacedName;
                             sb.Append('`').Append('`');
-                            nameSegments.Enqueue(sb.ToString());
+                            nameSegments.Enqueue((CodeCommentType.Code, sb.ToString()));
                             sb.Clear();
 
                             continue;
@@ -145,7 +195,7 @@ namespace FSharpNamespacer.Utilities
 
                         case ('`', '`', '=') when isSpacedName:
                             sb.Append('`').Append('`');
-                            nameSegments.Enqueue(sb.ToString());
+                            nameSegments.Enqueue((CodeCommentType.Code, sb.ToString()));
                             sb.Clear();
                             result = (nameSegments, true);
 
@@ -166,9 +216,19 @@ namespace FSharpNamespacer.Utilities
 
                             if (sb.Length > 4)
                             {
-                                nameSegments.Enqueue(sb.ToString());
+                                nameSegments.Enqueue((CodeCommentType.Code, sb.ToString()));
                                 sb.Clear();
+
+                                sb.Append('/').Append('/');
+                                while (running.Span.End < range.End)
+                                {
+                                    running = navigator.GetExtentOfWord(running.Span.End);
+                                    sb.Append(running.Span.GetText());
+                                }
+
+                                nameSegments.Enqueue((CodeCommentType.TerminateComment, sb.ToString()));
                                 result = (nameSegments, false);
+
                                 return true;
                             }
 
@@ -188,7 +248,7 @@ namespace FSharpNamespacer.Utilities
                         case ('`', '`', '.', '`', '`') when isSpacedName:
                             isSpacedName = !isSpacedName;
                             sb.Append('`').Append('`');
-                            nameSegments.Enqueue(sb.ToString());
+                            nameSegments.Enqueue((CodeCommentType.Code, sb.ToString()));
                             sb.Clear();
                             sb.Append('`').Append('`');
 
@@ -204,7 +264,7 @@ namespace FSharpNamespacer.Utilities
             // Add any remaining accumulated name to the queue
             if (sb.Length > 0)
             {
-                nameSegments.Enqueue(sb.ToString());
+                nameSegments.Enqueue((CodeCommentType.Code, sb.ToString()));
             }
 
             result = (nameSegments, false);

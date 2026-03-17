@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using FluentAssertions;
+using FSharpNamespacer.Models;
 using FSharpNamespacer.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Microsoft.VisualStudio.Text;
@@ -12,15 +14,28 @@ namespace FSharpNamespacer.Tests.Utilities
     [TestClass]
     public sealed class NameParserTests
     {
+        public static IEnumerable<object[]> GetData()
+        {
+            yield return new object[] { "foo", new string[] { "foo" }, new object[] { CodeCommentType.Code, "foo" }, false };
+            yield return new object[] { "``foo bar``", new string[] { "``", "foo", " ", "bar", "``" }, new object[] { CodeCommentType.Code, "``foo bar``" }, false };
+            yield return new object[] { "``foo bar``", new string[] { "``", "foo", " ", "bar", "``" }, new object[] { CodeCommentType.Code, "``foo bar``" }, false };
+            yield return new object[] { "foo =", new string[] { "foo", " ", "=" }, new object[] { CodeCommentType.Code, "foo" }, true };
+            yield return new object[] { "foo.bar", new string[] { "foo", ".", "bar" }, new object[] { CodeCommentType.Code, "foo", CodeCommentType.Code, "bar" }, false };
+            yield return new object[] { "foo.bar.baz", new string[] { "foo", ".", "bar", ".", "baz" }, new object[] { CodeCommentType.Code, "foo", CodeCommentType.Code, "bar", CodeCommentType.Code, "baz" }, false };
+            yield return new object[] { "foo.bar.baz = ", new string[] { "foo", ".", "bar", ".", "baz", " ", "=", " " }, new object[] { CodeCommentType.Code, "foo", CodeCommentType.Code, "bar", CodeCommentType.Code, "baz" }, true };
+            yield return new object[] { "foo // some comment", new string[] { "foo", " ", "//", " ", "some", " ", "comment" }, new object[] { CodeCommentType.Code, "foo", CodeCommentType.TerminateComment, "// some comment" }, false };
+            yield return new object[] { "foo (* some comment *)", new string[] { "foo", " ", "(*", " ", "some", " ", "comment", " ", "*)" }, new object[] { CodeCommentType.Code, "foo", CodeCommentType.InlineComment, "(* some comment *)" }, false };
+            yield return new object[] { "(* some comment *) foo", new string[] { "(*", " ", "some", " ", "comment", " ", "*)", " ", "foo" }, new object[] { CodeCommentType.InlineComment, "(* some comment *)", CodeCommentType.Code, "foo" }, false };
+        }
+
+        public static string GetDisplayName(MethodInfo methodInfo, object[] data)
+        {
+            return $"{methodInfo.Name} with value '{data[0]}'";
+        }
+
         [TestMethod]
-        [DataRow("foo", new string[] { "foo" }, new string[] { "foo" }, false)]
-        [DataRow("``foo bar``", new string[] { "``", "foo", " ", "bar", "``" }, new string[] { "``foo bar``" }, false)]
-        [DataRow("``foo bar``", new string[] { "``", "foo", " ", "bar", "``" }, new string[] { "``foo bar``" }, false)]
-        [DataRow("foo =", new string[] { "foo", " ", "=" }, new string[] { "foo" }, true)]
-        [DataRow("foo.bar", new string[] { "foo", ".", "bar" }, new string[] { "foo", "bar" }, false)]
-        [DataRow("foo.bar.baz", new string[] { "foo", ".", "bar", ".", "baz" }, new string[] { "foo", "bar", "baz" }, false)]
-        [DataRow("foo.bar.baz = ", new string[] { "foo", ".", "bar", ".", "baz", " ", "=", " " }, new string[] { "foo", "bar", "baz" }, true)]
-        public void TryGetNameSegments_Succeeded_ReturnsExpected(string text, string[] textExtents, string[] nameSegments, bool isEqualSign)
+        [DynamicData(nameof(GetData), DynamicDataSourceType.Method, DynamicDataDisplayName = nameof(GetDisplayName))]
+        public void TryGetNameSegments_Succeeded_ReturnsExpected(string text, string[] textExtents, object[] nameSegments, bool isEqualSign)
         {
             ITextSnapshot snapshot = CreateTextSnapshotMock(text);
             ITextStructureNavigator navigator = CreateNavigatorMock(snapshot, textExtents, text);
@@ -36,12 +51,13 @@ namespace FSharpNamespacer.Tests.Utilities
             result.Should().BeTrue();
             output.hasEqualSign.Should().Be(isEqualSign);
 
-            var segments = new List<string>();
-            while (output.nameSegments.Count > 0)
+            Queue<(CodeCommentType, string)> expectedOutput = new Queue<(CodeCommentType, string)>();
+            for (var i = 0; i < nameSegments.Length; i++)
             {
-                segments.Add(output.nameSegments.Dequeue());
+                expectedOutput.Enqueue(((CodeCommentType)nameSegments[i], (string)nameSegments[++i]));
             }
-            segments.Should().Equal(nameSegments);
+
+            output.nameSegments.Should().BeEquivalentTo(expectedOutput);
         }
 
         [TestMethod]
