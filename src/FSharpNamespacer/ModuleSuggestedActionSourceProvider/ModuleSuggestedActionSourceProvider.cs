@@ -74,9 +74,17 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
             DTE? dte = ServiceProvider.GetService(typeof(DTE)) as DTE;
             Assumes.Present(dte);
 
-            var projectFileName = dte.ActiveDocument?.ProjectItem?.ContainingProject.FileName;
+            var projectFileFullPath = dte.ActiveDocument?.ProjectItem?.ContainingProject.FileName;
+            // FileName
+            // var sourceFile = dte.ActiveDocument?.Name;
+            //var sourceFileFullPath = textDocument.FilePath;
 
-            return new AsyncSuggestedActionSource(this, textView, textBuffer, textDocument, projectFileName);
+            return new AsyncSuggestedActionSource(
+                this,
+                textView,
+                textBuffer,
+                textDocument,
+                projectFileFullPath);
         }
 
         #nullable restore

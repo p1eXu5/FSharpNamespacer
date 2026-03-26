@@ -19,7 +19,7 @@ namespace FSharpNamespacer.Actions
             : base(trackingSpan)
         {
                 var suggested = String.Join(".", fsModule.SuggestedFsModuleName.Take(fsModule.SuggestedFsModuleName.Length - 1));
-                DisplayText = $"namespace {suggested}";
+            DisplayText = $"namespace {suggested}";
                 ReplacingText = $"namespace {suggested}";
         }
 

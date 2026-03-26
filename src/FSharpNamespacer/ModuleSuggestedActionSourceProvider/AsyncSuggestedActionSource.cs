@@ -51,7 +51,9 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                 _projectFileName = projectFileName;
             }
 
+#pragma warning disable CS0067 // is never used
             public event EventHandler<EventArgs>? SuggestedActionsChanged;
+#pragma warning restore CS0067 // is never used
 
             public void Dispose()
             {
@@ -161,8 +163,11 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                     return Enumerable.Empty<SuggestedActionSet>();
                 }
 
-                // TODO:
-                return Enumerable.Empty<SuggestedActionSet>();
+                return builder.GetSuggestedActionSets(
+                    _textBuffer,
+                    range
+                    , _textDocument.FilePath,
+                    _projectFileName);
             }
 
             private async Task SwitchToTaskPoolAsync(CancellationToken cancellationToken)

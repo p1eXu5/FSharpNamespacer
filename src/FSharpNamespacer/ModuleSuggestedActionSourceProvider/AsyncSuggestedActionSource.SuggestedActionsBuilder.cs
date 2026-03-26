@@ -2,10 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using FSharpNamespacer.Actions;
+using FSharpNamespacer.Models;
 using FSharpNamespacer.Utilities;
 using Microsoft.VisualStudio.GraphModel.CodeSchema;
+using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Operations;
+
+#nullable enable
 
 namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 {
@@ -31,9 +36,9 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 #endregion Constants
 
-                private readonly State _state;
+                private readonly BuilderType _state;
 
-                private SuggestedActionsBuilder(State state, Span span, int versionNumber)
+                private SuggestedActionsBuilder(BuilderType state, Span span, int versionNumber)
                 {
                     _state = state;
                     Span = span;
@@ -48,11 +53,11 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 #region properties
 
-                internal bool IsNone => _state == State.None;
+                internal bool IsNone => _state == BuilderType.None;
 
-                internal bool IsNamespaceDetected => _state == State.NamespaceDetected;
+                internal bool IsNamespaceDetected => _state == BuilderType.NamespaceDetected;
 
-                internal bool IsModuleDetected => _state == State.ModuleDetected;
+                internal bool IsModuleDetected => _state == BuilderType.ModuleDetected;
 
                 internal Span Span { get; }
 
@@ -102,7 +107,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                             return CreateNone(range);
                         }
 
-                        bool isInComment = IsInComment(range.Start - 1, navigator);
+                        bool isInComment = range.Start > 0 && IsInComment(range.Start - 1, navigator);
 
                         if ((range.Start == 0 || !isInComment) && NameParser.TryGetNameSegments(navigator, range, running, out var result) && !result.hasEqualSign)
                         {
@@ -119,7 +124,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                             return CreateNone(range);
                         }
 
-                        bool isInComment = IsInComment(range.Start - 1, navigator);
+                        bool isInComment = range.Start > 0 && IsInComment(range.Start - 1, navigator);
 
                         if ((range.Start == 0 || !isInComment) && NameParser.TryGetNameSegments(navigator, range, running, out var result) && !result.hasEqualSign)
                         {
@@ -169,6 +174,14 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                 internal bool CorrespondsTo(SnapshotSpan range)
                     => Span == range.Span && range.Snapshot.Version.VersionNumber == VersionNumber;
 
+                internal virtual IEnumerable<SuggestedActionSet> GetSuggestedActionSets(
+                    ITextBuffer textBuffer,
+                    SnapshotSpan range,
+                    string sourceFilePath,
+                    string? projectFilePath
+                )
+                    => Enumerable.Empty<SuggestedActionSet>();
+
                 //------------------------------------------------------
                 //
                 //  types
@@ -177,7 +190,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 #region types
 
-                private enum State
+                private enum BuilderType
                 {
                     None,
                     NamespaceDetected,
@@ -187,30 +200,229 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                 internal sealed class None : SuggestedActionsBuilder
                 {
                     public None(Span span, int versionNumber)
-                        : base(State.None, span, versionNumber)
+                        : base(BuilderType.None, span, versionNumber)
                     { }
                 }
 
+                /// <summary>
+                /// Provides suggested actions for module and namespace naming based on code analysis and project
+                /// structure.
+                /// </summary>
                 internal sealed class NamespaceDetected : SuggestedActionsBuilder
                 {
-                    public NamespaceDetected(Span span, int versionNumber, Queue<string> nameSegments)
-                        : base(State.NamespaceDetected, span, versionNumber)
+                    public NamespaceDetected(Span span, int versionNumber, Queue<(CodeCommentType, string)> nameSegments)
+                        : base(BuilderType.NamespaceDetected, span, versionNumber)
                     {
                         NameSegments = nameSegments;
                     }
 
-                    internal Queue<string> NameSegments { get; }
+                    internal Queue<(CodeCommentType, string)> NameSegments { get; }
+
+                    /// <summary>
+                    /// Returns suggested action sets for module and namespace naming based on the specified file and
+                    /// project context.
+                    /// </summary>
+                    /// <param name="textBuffer">The text buffer containing the code.</param>
+                    /// <param name="range">The span of text to analyze for suggested actions.</param>
+                    /// <param name="sourceFilePath">The full path to the source file.</param>
+                    /// <param name="projectFilePath">The full path to the project file, or null if not available.</param>
+                    /// <returns>A collection of suggested action sets for module and namespace names.</returns>
+                    internal override IEnumerable<SuggestedActionSet> GetSuggestedActionSets(
+                        ITextBuffer textBuffer,
+                        SnapshotSpan range,
+                        string sourceFilePath,
+                        string? projectFilePath)
+                    {
+                        Queue<string> suggestedNameSegments = PathUtilities.GetRelativePathSegments(projectFilePath, sourceFilePath);
+                        bool isSame = suggestedNameSegments.SequenceEqual(
+                            NameSegments.Where(t => t.Item1 == CodeCommentType.Code).Select(t => t.Item2));
+
+                        Queue<string> suggestedOwnNameSegments = PathUtilities.GetRelativePathSegments(null, sourceFilePath);
+                        // TODO:
+
+                        var moduleActions = GetModuleSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+                        var namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+                        
+                        if (namespaceActions.Length == 0)
+                        {
+                            SuggestedActionSet moduleSet = new SuggestedActionSet(
+                                "F# Suggested Module Names",
+                                moduleActions);
+
+                            return new[] { moduleSet };
+                        }
+
+                        if (namespaceActions.Length > 0)
+                        {
+                            SuggestedActionSet namespaceSet = new SuggestedActionSet(
+                                "F# Suggested Namespace Names",
+                                namespaceActions);
+
+                            SuggestedActionSet moduleSet = new SuggestedActionSet(
+                                "F# Suggested Module Names",
+                                moduleActions);
+
+                            return new[] { namespaceSet, moduleSet };
+                        }
+
+                        return base.GetSuggestedActionSets(textBuffer, range, sourceFilePath, projectFilePath);
+                    }
+
+                    private IEnumerable<ISuggestedAction> GetNamespaceSuggestedActions(
+                        SnapshotSpan range,
+                        Queue<string> suggestedNameSegments,
+                        bool isSame
+                    )
+                    {
+                        if (!isSame)
+                        {
+                            yield return new ChangeLineAction(
+                                "namespace",
+                                range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive),
+                                suggestedNameSegments,
+                                NameSegments
+                                    .Where(t => t.Item1 == CodeCommentType.InlineComment || t.Item1 == CodeCommentType.TerminateComment)
+                                    .Select(t => t.Item2));
+                        }
+                    }
+
+                    private IEnumerable<ISuggestedAction> GetModuleSuggestedActions(
+                        SnapshotSpan range,
+                        Queue<string> suggestedNameSegments,
+                        bool isSame
+                    )
+                    {
+                        yield return new ChangeLineAction(
+                            "module",
+                            range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive),
+                            NameSegments
+                                .Where(t => t.Item1 == CodeCommentType.Code)
+                                .Select(t => t.Item2),
+                            NameSegments
+                                .Where(t => t.Item1 == CodeCommentType.InlineComment || t.Item1 == CodeCommentType.TerminateComment)
+                                .Select(t => t.Item2));
+
+                        if (!isSame)
+                        {
+                            yield return new ChangeLineAction(
+                                "module",
+                                range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive),
+                                suggestedNameSegments,
+                                NameSegments
+                                    .Where(t => t.Item1 == CodeCommentType.InlineComment || t.Item1 == CodeCommentType.TerminateComment)
+                                    .Select(t => t.Item2));
+                        }
+                    }
                 }
 
+                /// <summary>
+                /// Provides suggested actions for detected F# modules, including namespace and module name
+                /// recommendations based on code comments and file paths.
+                /// </summary>
                 internal sealed class ModuleDetected : SuggestedActionsBuilder
                 {
-                    public ModuleDetected(Span span, int versionNumber, Queue<string> nameSegments)
-                        : base(State.ModuleDetected, span, versionNumber)
+                    public ModuleDetected(Span span, int versionNumber, Queue<(CodeCommentType, string)> nameSegments)
+                        : base(BuilderType.ModuleDetected, span, versionNumber)
                     {
                         NameSegments = nameSegments;
                     }
 
-                    internal Queue<string> NameSegments { get; }
+                    internal Queue<(CodeCommentType, string)> NameSegments { get; }
+
+                    /// <summary>
+                    /// Returns suggested action sets for namespace and module naming based on the specified file and
+                    /// project paths within the given text range.
+                    /// </summary>
+                    /// <param name="textBuffer">The text buffer containing the code.</param>
+                    /// <param name="range">The span of text to analyze for suggested actions.</param>
+                    /// <param name="sourceFilePath">The full path to the source file.</param>
+                    /// <param name="projectFilePath">The full path to the project file, or null if unavailable.</param>
+                    /// <returns>A collection of suggested action sets for namespace and module names.</returns>
+                    internal override IEnumerable<SuggestedActionSet> GetSuggestedActionSets(
+                        ITextBuffer textBuffer,
+                        SnapshotSpan range,
+                        string sourceFilePath,
+                        string? projectFilePath)
+                    {
+                        Queue<string> suggestedNameSegments = PathUtilities.GetRelativePathSegments(projectFilePath, sourceFilePath);
+                        bool isSame = suggestedNameSegments.SequenceEqual(
+                            NameSegments.Where(t => t.Item1 == CodeCommentType.Code).Select(t => t.Item2));
+
+                        var namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+                        var moduleActions = GetModuleSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+
+                        if (moduleActions.Length == 0)
+                        {
+                            SuggestedActionSet namespaceSet = new SuggestedActionSet(
+                                "F# Suggested Namespace Names",
+                                namespaceActions);
+
+                            return new[] { namespaceSet };
+                        }
+
+                        if (moduleActions.Length > 0)
+                        {
+                            SuggestedActionSet moduleSet = new SuggestedActionSet(
+                                "F# Suggested Module Names",
+                                moduleActions);
+
+                            SuggestedActionSet namespaceSet = new SuggestedActionSet(
+                                "F# Suggested Namespace Names",
+                                namespaceActions);
+
+                            return new[] { namespaceSet, moduleSet };
+                        }
+
+                        return base.GetSuggestedActionSets(textBuffer, range, sourceFilePath, projectFilePath);
+                    }
+
+                    private IEnumerable<ISuggestedAction> GetModuleSuggestedActions(
+                        SnapshotSpan range,
+                        Queue<string> suggestedNameSegments,
+                        bool isSame
+                    )
+                    {
+                        if (!isSame)
+                        {
+                            yield return new ChangeLineAction(
+                                "module",
+                                range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive),
+                                suggestedNameSegments,
+                                NameSegments
+                                    .Where(t => t.Item1 == CodeCommentType.InlineComment || t.Item1 == CodeCommentType.TerminateComment)
+                                    .Select(t => t.Item2));
+                        }
+                    }
+
+                    private IEnumerable<ISuggestedAction> GetNamespaceSuggestedActions(
+                        SnapshotSpan range,
+                        Queue<string> suggestedNameSegments,
+                        bool isSame
+                    )
+                    {
+                        var trackingSpan = range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive);
+
+                        yield return new ChangeLineAction(
+                            "namespace",
+                            range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive),
+                            NameSegments
+                                .Where(t => t.Item1 == CodeCommentType.Code)
+                                .Select(t => t.Item2),
+                            NameSegments
+                                .Where(t => t.Item1 == CodeCommentType.InlineComment || t.Item1 == CodeCommentType.TerminateComment)
+                                .Select(t => t.Item2));
+
+                        if (!isSame)
+                        {
+                            yield return new ChangeLineAction(
+                                "namespace",
+                                range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive),
+                                suggestedNameSegments,
+                                NameSegments
+                                    .Where(t => t.Item1 == CodeCommentType.InlineComment || t.Item1 == CodeCommentType.TerminateComment)
+                                    .Select(t => t.Item2));
+                        }
+                    }
                 }
 
                 #endregion types

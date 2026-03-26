@@ -259,6 +259,8 @@ namespace FSharpNamespacer.Utilities
                             continue;
                     }
                 }
+
+                sb.Append(runningText);
             }
 
             // Add any remaining accumulated name to the queue

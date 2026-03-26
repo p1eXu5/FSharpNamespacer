@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using FSharpNamespacer.Models;
 using Microsoft.VisualStudio.Text;
 
@@ -14,12 +15,17 @@ namespace FSharpNamespacer.Actions
         /// </summary>
         /// <param name="trackingSpan"></param>
         /// <param name="fsModule"></param>
-        public ChangeToNamespaceAction(ITrackingSpan trackingSpan, IFsFileRootScope fsModule)
+        public ChangeToNamespaceAction(
+            ITrackingSpan trackingSpan,
+            IEnumerable<string> suggestedNameSegments,
+            IEnumerable<string> commentSegments
+        )
             : base(trackingSpan)
         {
-            var suggested = String.Join(".", fsModule.FsModuleOrNamespaceName);
-            DisplayText = $"namespace {suggested}";
-            ReplacingText = $"namespace {suggested}";
+            var name = String.Join(".", suggestedNameSegments);
+            var comment = String.Join(" ", commentSegments);
+            string text = $"namespace {name} {comment}".TrimEnd();
+            ReplacingText = DisplayText = text;
         }
 
         public override string DisplayText { get; }

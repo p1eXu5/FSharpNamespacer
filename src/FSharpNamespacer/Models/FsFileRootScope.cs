@@ -19,11 +19,11 @@ namespace FSharpNamespacer.Models
         
         public int NameStartIndex { get; private set; }
 
-        public string[] FsModuleOrNamespaceName { get; private set; }
-        
+        public string[] FsModuleOrNamespaceName { get; private set; } = Array.Empty<string>();
+
         public string[] SuggestedFsModuleName { get; private set; } = Array.Empty<string>();
 
-        public ITextSnapshotLine TextSnapshotLine { get; private set; }
+        public ITextSnapshotLine TextSnapshotLine { get; private set; } = default!;
 
         public bool IsFsModule => FsModuleOrNamespace == FsModuleOrNamespace.Module;
 
@@ -82,7 +82,7 @@ namespace FSharpNamespacer.Models
              * range contains whole line.
              */
 
-            instance = default;
+            instance = default!;
 
             if (range.IsEmpty && range.Start == 0)
             {
