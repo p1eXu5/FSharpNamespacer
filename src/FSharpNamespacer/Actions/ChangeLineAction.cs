@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using FSharpNamespacer.Models;
 using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
@@ -36,6 +38,7 @@ namespace FSharpNamespacer.Actions
         private static readonly SolidColorBrush _diffForegroundBrush;
         private static readonly SolidColorBrush _commentBrush;
         private static readonly SolidColorBrush _keywordBrush;
+        private static readonly SolidColorBrush _typeBrush;
 
         static ChangeLineAction()
         {
@@ -74,40 +77,95 @@ namespace FSharpNamespacer.Actions
             var keywordBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x56, 0x9C, 0xD6));
             keywordBrush.Freeze();
             _keywordBrush = keywordBrush;
+
+            var typeBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x4E, 0xC9, 0xB0));
+            typeBrush.Freeze();
+            _typeBrush = typeBrush;
         }
 
         #endregion static
 
         private readonly ITrackingSpan _trackingSpan;
-        private readonly string _keyword;
+        private readonly string _suggestedkeyword;
         private readonly string _newName;
+        private readonly bool _isSuggestedModule;
         private readonly string _comment;
+        private readonly string _originKeyword;
+        private readonly Queue<(CodeCommentType, string)> _originLine;
 
-        /// <summary>
-        /// <inheritdoc cref="ChangeLineAction"/>
-        /// </summary>
-        /// <param name="trackingSpan"></param>
-        /// <param name="fsModule"></param>
         public ChangeLineAction(
-            string keyword,
             ITrackingSpan trackingSpan,
-            IEnumerable<string> suggestedNameSegments,
-            IEnumerable<string> commentSegments
+            string originKeyword,
+            Queue<(CodeCommentType, string)> originLine,
+            IEnumerable<string> suggestedNameSegments
+        )
+            : this(
+                  trackingSpan,
+                  originKeyword,
+                  originLine,
+                  originKeyword,
+                  suggestedNameSegments
+            )
+        {
+        }
+
+        public ChangeLineAction(
+            ITrackingSpan trackingSpan,
+            string originKeyword,
+            Queue<(CodeCommentType, string)> originLine,
+            string suggestedKeyword
+        )
+            : this(
+                trackingSpan,
+                originKeyword,
+                originLine,
+                suggestedKeyword,
+                originLine
+                    .Where(t => t.Item1 == CodeCommentType.Code)
+                    .Select(t => t.Item2)
+            )
+        {
+        }
+
+        public ChangeLineAction(
+            ITrackingSpan trackingSpan,
+            string originKeyword,
+            Queue<(CodeCommentType, string)> originLine,
+            string suggestedKeyword,
+            IEnumerable<string> suggestedNameSegments
         )
         {
-            _trackingSpan = trackingSpan;
+            if (originLine == null)
+            {
+                throw new ArgumentNullException(nameof(originLine));
+            }
 
-            _keyword = keyword;
+            if (originLine.Count == 0)
+            {
+                throw new ArgumentException("originLine must contain items.");
+            }
+
+            _originLine = originLine;
+            _originKeyword = originKeyword;
+
+            IEnumerable<string> commentSegments =
+                originLine
+                      .Where(t => t.Item1 == CodeCommentType.InlineComment || t.Item1 == CodeCommentType.TerminateComment)
+                      .Select(t => t.Item2);
+
+            _trackingSpan = trackingSpan;
+            _suggestedkeyword = suggestedKeyword;
 
             var name = String.Join(".", suggestedNameSegments);
             _newName = name;
 
+            _isSuggestedModule = suggestedKeyword == "module";
+
             var comment = String.Join(" ", commentSegments);
             _comment = comment;
 
-            DisplayText = $"{keyword} {name} {comment}".TrimEnd();
+            DisplayText = $"{suggestedKeyword} {name} {comment}".TrimEnd();
         }
-
 
         //------------------------------------------------------
         //
@@ -159,11 +217,64 @@ namespace FSharpNamespacer.Actions
                 FontWeight = FontWeights.ExtraLight,
             };
             existingTextBlock.Inlines.Add(new Run() { Text = "-", Foreground = _diffForegroundBrush, Background = _lightRedBrush });
-            existingTextBlock.Inlines.Add(new Run() { Text = _keyword, Foreground = _keywordBrush });
-            existingTextBlock.Inlines.Add(new Run() { Text = " " });
-            existingTextBlock.Inlines.Add(new Run() { Text = _newName, Foreground = _nameBrush });
-            existingTextBlock.Inlines.Add(new Run() { Text = " " });
-            existingTextBlock.Inlines.Add(new Run() { Text = _comment, Foreground = _commentBrush });
+            existingTextBlock.Inlines.Add(new Run() { Text = _originKeyword + ' ', Foreground = _keywordBrush });
+
+            (CodeCommentType, string) codeComment;
+            int i = 0;
+            
+            using var enumerator = _originLine.GetEnumerator();
+            enumerator.MoveNext();
+
+            bool isLastCode = false;
+
+            codeComment = enumerator.Current;
+            switch (codeComment.Item1)
+            {
+                case CodeCommentType.Code:
+                    existingTextBlock.Inlines.Add(new Run() { Text = codeComment.Item2, Foreground = _nameBrush });
+                    isLastCode = true;
+                    break;
+
+                case CodeCommentType.InlineComment:
+                case CodeCommentType.TerminateComment:
+                    existingTextBlock.Inlines.Add(new Run() { Text = codeComment.Item2, Foreground = _commentBrush });
+                    isLastCode = false;
+                    break;
+            }
+
+            ++i;
+
+            if (_originLine.Count > 1)
+            {
+                for (; i <= _originLine.Count - 1; ++i)
+                {
+                    enumerator.MoveNext();
+                    codeComment = enumerator.Current;
+
+                    switch (codeComment.Item1)
+                    {
+                        case CodeCommentType.Code:
+                            existingTextBlock.Inlines.Add(
+                                new Run() { Text = (isLastCode ? '.' : ' ') + codeComment.Item2, Foreground = _nameBrush }
+                            );
+
+                            isLastCode = true;
+
+                            break;
+
+                        case CodeCommentType.InlineComment:
+                        case CodeCommentType.TerminateComment:
+                            existingTextBlock.Inlines.Add(
+                                new Run() { Text =  ' ' + codeComment.Item2, Foreground = _commentBrush }
+                            );
+
+                            isLastCode = false;
+                            
+                            break;
+                    }
+                }
+            }
+
 
             var replacementTextBlock = new TextBlock
             {
@@ -174,18 +285,60 @@ namespace FSharpNamespacer.Actions
                 FontWeight = FontWeights.ExtraLight,
             };
             replacementTextBlock.Inlines.Add(new Run() { Text = "+", Foreground = _diffForegroundBrush, Background = _lightGreenBrush });
-            replacementTextBlock.Inlines.Add(new Run() { Text = _keyword, Foreground = _keywordBrush });
-            replacementTextBlock.Inlines.Add(new Run() { Text = " " });
-            replacementTextBlock.Inlines.Add(new Run() { Text = _newName, Foreground = _nameBrush });
-            replacementTextBlock.Inlines.Add(new Run() { Text = " " });
+            replacementTextBlock.Inlines.Add(new Run() { Text = _suggestedkeyword + ' ', Foreground = _keywordBrush });
+
+            if (_isSuggestedModule)
+            {
+                var dotInd = _newName.LastIndexOf(".");
+                if (dotInd >= 0 && dotInd < _newName.Length - 1)
+                {
+                    replacementTextBlock.Inlines.Add(new Run()
+                    {
+                        Text = _newName.Substring(0, dotInd + 1),
+                        Foreground = _nameBrush 
+                    });
+
+                    replacementTextBlock.Inlines.Add(new Run()
+                    {
+                        Text = _newName.Substring(dotInd + 1) + ' ',
+                        Foreground = _typeBrush
+                    });
+                }
+                else
+                {
+                    replacementTextBlock.Inlines.Add(new Run() { Text = _newName + ' ', Foreground = _typeBrush });
+                }
+            }
+            else
+            {
+                replacementTextBlock.Inlines.Add(new Run() { Text = _newName + ' ', Foreground = _nameBrush });
+            }
             replacementTextBlock.Inlines.Add(new Run() { Text = _comment, Foreground = _commentBrush });
 
             var stackPanel = new StackPanel()
             {
                 Orientation = Orientation.Vertical,
             };
+            stackPanel.Children.Add(new TextBlock
+            {
+                Background = Brushes.Transparent,
+                Padding = new Thickness(0),
+                FontSize = 13,
+                FontFamily = new FontFamily("Consolas"),
+                FontWeight = FontWeights.ExtraLight,
+                Text = " ...",
+            });
             stackPanel.Children.Add(existingTextBlock);
             stackPanel.Children.Add( replacementTextBlock );
+            stackPanel.Children.Add(new TextBlock
+            {
+                Background = Brushes.Transparent,
+                Padding = new Thickness(0),
+                FontSize = 13,
+                FontFamily = new FontFamily("Consolas"),
+                FontWeight = FontWeights.ExtraLight,
+                Text = " ...",
+            });
 
             var border = new Border
             {

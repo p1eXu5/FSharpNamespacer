@@ -64,8 +64,10 @@
     <Compile Include="Models\IFsFileRootScope.cs" />
     <Compile Include="Models\FsFileRootScope.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\AsyncSuggestedActionSource.Privates.cs" />
-    <Compile Include="ModuleSuggestedActionSourceProvider\AsyncSuggestedActionSource.SuggestedActionsBuilder.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\ModuleSuggestedActionSourceProvider.cs" />
+    <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.cs" />
+    <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.ModuleDetected.cs" />
+    <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.NamespaceDetected.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FSharpNamespacerPackage.cs" />
     <Compile Include="Utilities\NameParser.cs" />
