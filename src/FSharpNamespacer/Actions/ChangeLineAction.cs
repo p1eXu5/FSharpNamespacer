@@ -19,7 +19,7 @@ namespace FSharpNamespacer.Actions
     /// <summary>
     /// Suggestion: <c>`module FsModuleOrNamespaceName</c>
     /// </summary>
-    internal sealed class ChangeLineAction : ISuggestedAction
+    internal class ChangeLineAction : ISuggestedAction
     {
         //------------------------------------------------------
         //
@@ -208,112 +208,8 @@ namespace FSharpNamespacer.Actions
 
         public Task<object?> GetPreviewAsync(CancellationToken cancellationToken)
         {
-            var existingTextBlock = new TextBlock
-            {
-                Background = _redBrush,
-                Padding = new Thickness(0),
-                FontSize = 13,
-                FontFamily = new FontFamily("Consolas"),
-                FontWeight = FontWeights.ExtraLight,
-            };
-            existingTextBlock.Inlines.Add(new Run() { Text = "-", Foreground = _diffForegroundBrush, Background = _lightRedBrush });
-            existingTextBlock.Inlines.Add(new Run() { Text = _originKeyword + ' ', Foreground = _keywordBrush });
-
-            (CodeCommentType, string) codeComment;
-            int i = 0;
-            
-            using var enumerator = _originLine.GetEnumerator();
-            enumerator.MoveNext();
-
-            bool isLastCode = false;
-
-            codeComment = enumerator.Current;
-            switch (codeComment.Item1)
-            {
-                case CodeCommentType.Code:
-                    existingTextBlock.Inlines.Add(new Run() { Text = codeComment.Item2, Foreground = _nameBrush });
-                    isLastCode = true;
-                    break;
-
-                case CodeCommentType.InlineComment:
-                case CodeCommentType.TerminateComment:
-                    existingTextBlock.Inlines.Add(new Run() { Text = codeComment.Item2, Foreground = _commentBrush });
-                    isLastCode = false;
-                    break;
-            }
-
-            ++i;
-
-            if (_originLine.Count > 1)
-            {
-                for (; i <= _originLine.Count - 1; ++i)
-                {
-                    enumerator.MoveNext();
-                    codeComment = enumerator.Current;
-
-                    switch (codeComment.Item1)
-                    {
-                        case CodeCommentType.Code:
-                            existingTextBlock.Inlines.Add(
-                                new Run() { Text = (isLastCode ? '.' : ' ') + codeComment.Item2, Foreground = _nameBrush }
-                            );
-
-                            isLastCode = true;
-
-                            break;
-
-                        case CodeCommentType.InlineComment:
-                        case CodeCommentType.TerminateComment:
-                            existingTextBlock.Inlines.Add(
-                                new Run() { Text =  ' ' + codeComment.Item2, Foreground = _commentBrush }
-                            );
-
-                            isLastCode = false;
-                            
-                            break;
-                    }
-                }
-            }
-
-
-            var replacementTextBlock = new TextBlock
-            {
-                Background = _greenBrush,
-                Padding = new Thickness(0),
-                FontSize = 13,
-                FontFamily = new FontFamily("Consolas"),
-                FontWeight = FontWeights.ExtraLight,
-            };
-            replacementTextBlock.Inlines.Add(new Run() { Text = "+", Foreground = _diffForegroundBrush, Background = _lightGreenBrush });
-            replacementTextBlock.Inlines.Add(new Run() { Text = _suggestedkeyword + ' ', Foreground = _keywordBrush });
-
-            if (_isSuggestedModule)
-            {
-                var dotInd = _newName.LastIndexOf(".");
-                if (dotInd >= 0 && dotInd < _newName.Length - 1)
-                {
-                    replacementTextBlock.Inlines.Add(new Run()
-                    {
-                        Text = _newName.Substring(0, dotInd + 1),
-                        Foreground = _nameBrush 
-                    });
-
-                    replacementTextBlock.Inlines.Add(new Run()
-                    {
-                        Text = _newName.Substring(dotInd + 1) + ' ',
-                        Foreground = _typeBrush
-                    });
-                }
-                else
-                {
-                    replacementTextBlock.Inlines.Add(new Run() { Text = _newName + ' ', Foreground = _typeBrush });
-                }
-            }
-            else
-            {
-                replacementTextBlock.Inlines.Add(new Run() { Text = _newName + ' ', Foreground = _nameBrush });
-            }
-            replacementTextBlock.Inlines.Add(new Run() { Text = _comment, Foreground = _commentBrush });
+            TextBlock existingTextBlock = GetExistingTextBlock();
+            TextBlock replacementTextBlock = GetReplacementTextBlock();
 
             var stackPanel = new StackPanel()
             {
@@ -329,7 +225,7 @@ namespace FSharpNamespacer.Actions
                 Text = " ...",
             });
             stackPanel.Children.Add(existingTextBlock);
-            stackPanel.Children.Add( replacementTextBlock );
+            stackPanel.Children.Add(replacementTextBlock);
             stackPanel.Children.Add(new TextBlock
             {
                 Background = Brushes.Transparent,
@@ -374,5 +270,120 @@ namespace FSharpNamespacer.Actions
         }
 
         #endregion ITelemetryIdProvider<Guid> implementation
+
+        protected virtual TextBlock GetExistingTextBlock()
+        {
+            var existingTextBlock = new TextBlock
+            {
+                Background = _redBrush,
+                Padding = new Thickness(0),
+                FontSize = 13,
+                FontFamily = new FontFamily("Consolas"),
+                FontWeight = FontWeights.ExtraLight,
+            };
+            existingTextBlock.Inlines.Add(new Run() { Text = "-", Foreground = _diffForegroundBrush, Background = _lightRedBrush });
+            existingTextBlock.Inlines.Add(new Run() { Text = _originKeyword + ' ', Foreground = _keywordBrush });
+
+            (CodeCommentType, string) codeComment;
+            int i = 0;
+
+            using var enumerator = _originLine.GetEnumerator();
+            enumerator.MoveNext();
+
+            bool isLastCode = false;
+
+            codeComment = enumerator.Current;
+            switch (codeComment.Item1)
+            {
+                case CodeCommentType.Code:
+                    existingTextBlock.Inlines.Add(new Run() { Text = codeComment.Item2, Foreground = _nameBrush });
+                    isLastCode = true;
+                    break;
+
+                case CodeCommentType.InlineComment:
+                case CodeCommentType.TerminateComment:
+                    existingTextBlock.Inlines.Add(new Run() { Text = codeComment.Item2, Foreground = _commentBrush });
+                    isLastCode = false;
+                    break;
+            }
+
+            ++i;
+
+            if (_originLine.Count > 1)
+            {
+                for (; i <= _originLine.Count - 1; ++i)
+                {
+                    enumerator.MoveNext();
+                    codeComment = enumerator.Current;
+
+                    switch (codeComment.Item1)
+                    {
+                        case CodeCommentType.Code:
+                            existingTextBlock.Inlines.Add(
+                                new Run() { Text = (isLastCode ? '.' : ' ') + codeComment.Item2, Foreground = _nameBrush }
+                            );
+
+                            isLastCode = true;
+
+                            break;
+
+                        case CodeCommentType.InlineComment:
+                        case CodeCommentType.TerminateComment:
+                            existingTextBlock.Inlines.Add(
+                                new Run() { Text = ' ' + codeComment.Item2, Foreground = _commentBrush }
+                            );
+
+                            isLastCode = false;
+
+                            break;
+                    }
+                }
+            }
+
+            return existingTextBlock;
+        }
+
+        protected virtual TextBlock GetReplacementTextBlock()
+        {
+            var replacementTextBlock = new TextBlock
+            {
+                Background = _greenBrush,
+                Padding = new Thickness(0),
+                FontSize = 13,
+                FontFamily = new FontFamily("Consolas"),
+                FontWeight = FontWeights.ExtraLight,
+            };
+            replacementTextBlock.Inlines.Add(new Run() { Text = "+", Foreground = _diffForegroundBrush, Background = _lightGreenBrush });
+            replacementTextBlock.Inlines.Add(new Run() { Text = _suggestedkeyword + ' ', Foreground = _keywordBrush });
+
+            if (_isSuggestedModule)
+            {
+                var dotInd = _newName.LastIndexOf(".");
+                if (dotInd >= 0 && dotInd < _newName.Length - 1)
+                {
+                    replacementTextBlock.Inlines.Add(new Run()
+                    {
+                        Text = _newName.Substring(0, dotInd + 1),
+                        Foreground = _nameBrush
+                    });
+
+                    replacementTextBlock.Inlines.Add(new Run()
+                    {
+                        Text = _newName.Substring(dotInd + 1) + ' ',
+                        Foreground = _typeBrush
+                    });
+                }
+                else
+                {
+                    replacementTextBlock.Inlines.Add(new Run() { Text = _newName + ' ', Foreground = _typeBrush });
+                }
+            }
+            else
+            {
+                replacementTextBlock.Inlines.Add(new Run() { Text = _newName + ' ', Foreground = _nameBrush });
+            }
+            replacementTextBlock.Inlines.Add(new Run() { Text = _comment, Foreground = _commentBrush });
+            return replacementTextBlock;
+        }
     }
 }
