@@ -34,45 +34,13 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 #endregion Constants
 
-                private readonly BuilderType _state;
-
-                private SuggestedActionsBuilder(BuilderType state, Span span, int versionNumber, int indentSize)
-                {
-                    _state = state;
-                    Span = span;
-                    VersionNumber = versionNumber;
-                    IndentSize = indentSize;
-                }
-
                 //------------------------------------------------------
                 //
-                //  properties
+                //  static
                 //
                 //------------------------------------------------------
 
-                #region properties
-
-                internal bool IsNone => _state == BuilderType.None;
-
-                internal bool IsNamespaceDetected => _state == BuilderType.NamespaceDetected;
-
-                internal bool IsModuleDetected => _state == BuilderType.ModuleDetected;
-
-                internal Span Span { get; }
-
-                internal int VersionNumber { get; }
-
-                public int IndentSize { get; }
-
-                #endregion properties
-
-                //------------------------------------------------------
-                //
-                //  builder
-                //
-                //------------------------------------------------------
-
-                #region builder
+                #region static
 
                 internal static SuggestedActionsBuilder Create(AsyncSuggestedActionSource source, SnapshotSpan range)
                 {
@@ -165,12 +133,50 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                     return false;
                 }
 
-                #endregion builder
-
-                // internal abstract 
-
                 internal static SuggestedActionsBuilder CreateNone(SnapshotSpan range)
                     => new None(range.Span, range.Snapshot.Version.VersionNumber);
+
+                #endregion static
+
+                private readonly BuilderType _state;
+
+                private SuggestedActionsBuilder(BuilderType state, Span span, int versionNumber, int indentSize)
+                {
+                    _state = state;
+                    Span = span;
+                    VersionNumber = versionNumber;
+                    IndentSize = indentSize;
+                }
+
+                //------------------------------------------------------
+                //
+                //  properties
+                //
+                //------------------------------------------------------
+
+                #region properties
+
+                internal bool IsNone => _state == BuilderType.None;
+
+                internal bool IsNamespaceDetected => _state == BuilderType.NamespaceDetected;
+
+                internal bool IsModuleDetected => _state == BuilderType.ModuleDetected;
+
+                internal Span Span { get; }
+
+                internal int VersionNumber { get; }
+
+                public int IndentSize { get; }
+
+                #endregion properties
+
+                //------------------------------------------------------
+                //
+                //  methods
+                //
+                //------------------------------------------------------
+
+                #region methods
 
                 internal bool CorrespondsTo(SnapshotSpan range)
                     => Span == range.Span && range.Snapshot.Version.VersionNumber == VersionNumber;
@@ -209,13 +215,15 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                         actions: wrappedModuleActions);
                 }
 
+                #endregion methods
+
                 //------------------------------------------------------
                 //
-                //  types
+                //  BuilderType enum
                 //
                 //------------------------------------------------------
 
-                #region types
+                #region BuilderType enum
 
                 private enum BuilderType
                 {
@@ -224,14 +232,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                     ModuleDetected
                 }
 
-                internal sealed class None : SuggestedActionsBuilder
-                {
-                    public None(Span span, int versionNumber)
-                        : base(BuilderType.None, span, versionNumber, -1)
-                    { }
-                }
-
-                #endregion types
+                #endregion BuilderType enum
             }
         }
     }

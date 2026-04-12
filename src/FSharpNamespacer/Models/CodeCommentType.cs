@@ -1,6 +1,6 @@
 ﻿namespace FSharpNamespacer.Models
 {
-    public enum CodeCommentType
+    internal enum CodeCommentType
     {
         Code = 1,
         InlineComment = 2,

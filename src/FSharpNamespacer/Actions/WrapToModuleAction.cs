@@ -6,7 +6,6 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using FSharpNamespacer.Models;
 using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Editor;
 
 #nullable enable
 
@@ -147,7 +146,7 @@ namespace FSharpNamespacer.Actions
 
             snapshot = _trackingSpan.TextBuffer.CurrentSnapshot;
 
-            var indentString = new String(' ', _indentSize);
+            string indentString = new String(' ', _indentSize);
 
             // Indent all lines after the replacement
             for (int i = currentLineNumber + replacementLines.Count; i < snapshot.LineCount; i++)
@@ -167,7 +166,7 @@ namespace FSharpNamespacer.Actions
             }
         }
 
-        static string GetNewLineText(ITextSnapshotLine line)
+        private static string GetNewLineText(ITextSnapshotLine line)
         {
             if (line.LineBreakLength > 0)
             {
@@ -176,7 +175,7 @@ namespace FSharpNamespacer.Actions
             else if (line.LineNumber - 1 >= 0)
             {
                 // If this is the last line then there is no line break, use the line above 
-                var lineAbove = line.Snapshot.GetLineFromLineNumber(line.LineNumber - 1);
+                ITextSnapshotLine lineAbove = line.Snapshot.GetLineFromLineNumber(line.LineNumber - 1);
                 return lineAbove.GetLineBreakText();
             }
             else

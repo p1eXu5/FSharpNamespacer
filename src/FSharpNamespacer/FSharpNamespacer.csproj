@@ -56,6 +56,7 @@
     <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.ModuleDetected.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.NamespaceDetected.cs" />
+    <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.None.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FSharpNamespacerPackage.cs" />
     <Compile Include="Utilities\NameParser.cs" />

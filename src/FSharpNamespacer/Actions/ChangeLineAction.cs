@@ -7,7 +7,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
-using EnvDTE;
 using FSharpNamespacer.Models;
 using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -43,43 +42,43 @@ namespace FSharpNamespacer.Actions
 
         static ChangeLineAction()
         {
-            var backgroundBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x1E, 0x1E, 0x1E));
+            SolidColorBrush backgroundBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x1E, 0x1E, 0x1E));
             backgroundBrush.Freeze();
             _backgroundBrush = backgroundBrush;
 
-            var nameBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0xE6, 0xE6, 0xE6));
+            SolidColorBrush nameBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0xE6, 0xE6, 0xE6));
             nameBrush.Freeze();
             _nameBrush = nameBrush;
 
-            var redBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x2D, 0x00, 0x00));
+            SolidColorBrush redBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x2D, 0x00, 0x00));
             redBrush.Freeze();
             _redBrush = redBrush;
 
-            var lightRedBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x3C, 0x00, 0x00));
+            SolidColorBrush lightRedBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x3C, 0x00, 0x00));
             lightRedBrush.Freeze();
             _lightRedBrush = lightRedBrush;
 
-            var greenBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x15, 0x35, 0x2C));
+            SolidColorBrush greenBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x15, 0x35, 0x2C));
             greenBrush.Freeze();
             _greenBrush = greenBrush;
 
-            var lightGreenBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0X26, 0x5E, 0x4D));
+            SolidColorBrush lightGreenBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0X26, 0x5E, 0x4D));
             lightGreenBrush.Freeze();
             _lightGreenBrush = lightGreenBrush;
 
-            var diffForegroundBrush = new SolidColorBrush(Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF));
+            SolidColorBrush diffForegroundBrush = new SolidColorBrush(Color.FromArgb(0x99, 0xFF, 0xFF, 0xFF));
             diffForegroundBrush.Freeze();
             _diffForegroundBrush = diffForegroundBrush;
 
-            var commentBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x57, 0xA6, 0x4A));
+            SolidColorBrush commentBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x57, 0xA6, 0x4A));
             commentBrush.Freeze();
             _commentBrush = commentBrush;
 
-            var keywordBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x56, 0x9C, 0xD6));
+            SolidColorBrush keywordBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x56, 0x9C, 0xD6));
             keywordBrush.Freeze();
             _keywordBrush = keywordBrush;
 
-            var typeBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x4E, 0xC9, 0xB0));
+            SolidColorBrush typeBrush = new SolidColorBrush(Color.FromArgb(0xFF, 0x4E, 0xC9, 0xB0));
             typeBrush.Freeze();
             _typeBrush = typeBrush;
         }
@@ -159,7 +158,7 @@ namespace FSharpNamespacer.Actions
             _suggestedNameSegments = suggestedNameSegments;
             _isSuggestedModule = suggestedKeyword == "module";
 
-            var comment = String.Join(" ", commentSegments);
+            string comment = String.Join(" ", commentSegments);
             _comment = comment;
         }
 
@@ -190,7 +189,8 @@ namespace FSharpNamespacer.Actions
         private string? _displayText;
         public virtual string DisplayText
         {
-            get {
+            get
+            {
                 if (_displayText != null)
                 {
                     return _displayText;
@@ -220,7 +220,7 @@ namespace FSharpNamespacer.Actions
             TextBlock existingTextBlock = GetExistingTextBlock();
             TextBlock replacementTextBlock = GetReplacementTextBlock();
 
-            var stackPanel = new StackPanel()
+            StackPanel stackPanel = new StackPanel()
             {
                 Orientation = Orientation.Vertical,
             };
@@ -245,7 +245,7 @@ namespace FSharpNamespacer.Actions
                 Text = " ...",
             });
 
-            var border = new Border
+            Border border = new Border
             {
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(10, 5, 10, 5),
@@ -307,14 +307,14 @@ namespace FSharpNamespacer.Actions
 
         protected virtual TextBlock GetExistingTextBlock()
         {
-            var existingTextBlock = GetTextBlock(_redBrush);
+            TextBlock existingTextBlock = GetTextBlock(_redBrush);
             existingTextBlock.Inlines.Add(new Run() { Text = "-", Foreground = _diffForegroundBrush, Background = _lightRedBrush });
             existingTextBlock.Inlines.Add(new Run() { Text = _originKeyword + ' ', Foreground = _keywordBrush });
 
             (CodeCommentType, string) codeComment;
             int i = 0;
 
-            using var enumerator = _originLine.GetEnumerator();
+            using Queue<(CodeCommentType, string)>.Enumerator enumerator = _originLine.GetEnumerator();
             enumerator.MoveNext();
 
             bool isLastCode = false;
@@ -372,15 +372,15 @@ namespace FSharpNamespacer.Actions
 
         protected virtual TextBlock GetReplacementTextBlock()
         {
-            var replacementTextBlock = GetTextBlock(_greenBrush);
+            TextBlock replacementTextBlock = GetTextBlock(_greenBrush);
             replacementTextBlock.Inlines.Add(new Run() { Text = "+", Foreground = _diffForegroundBrush, Background = _lightGreenBrush });
             replacementTextBlock.Inlines.Add(new Run() { Text = _suggestedKeyword + ' ', Foreground = _keywordBrush });
 
-            var newName = NewName;
+            string newName = NewName;
 
             if (_isSuggestedModule)
             {
-                var dotInd = newName.LastIndexOf(".");
+                int dotInd = newName.LastIndexOf(".");
                 if (dotInd >= 0 && dotInd < newName.Length - 1)
                 {
                     replacementTextBlock.Inlines.Add(new Run()
