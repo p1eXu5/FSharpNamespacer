@@ -1,14 +1,12 @@
-﻿using System.Buffers;
+﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using FSharpNamespacer.Actions;
 using FSharpNamespacer.Models;
 using FSharpNamespacer.Utilities;
-using Microsoft.VisualStudio.GraphModel.CodeSchema;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Operations;
 
 #nullable enable
 
@@ -26,8 +24,8 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                 /// </summary>
                 internal sealed class NamespaceDetected : SuggestedActionsBuilder
                 {
-                    public NamespaceDetected(Span span, int versionNumber, Queue<(CodeCommentType, string)> nameSegments)
-                        : base(BuilderType.NamespaceDetected, span, versionNumber)
+                    public NamespaceDetected(Span span, int versionNumber, Queue<(CodeCommentType, string)> nameSegments, int indentSize)
+                        : base(BuilderType.NamespaceDetected, span, versionNumber, indentSize)
                     {
                         NameSegments = nameSegments;
                     }
@@ -56,29 +54,38 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                         Queue<string> suggestedOwnNameSegments = PathUtilities.GetRelativePathSegments(null, sourceFilePath);
                         // TODO: implement default suggested module name
 
-                        var moduleActions = GetModuleSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
-                        var namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+                        ISuggestedAction[] moduleActions = GetModuleSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+                        ISuggestedAction[] namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+
+                        bool suggestedNameContainsNamespace = suggestedNameSegments.Count > 1;
 
                         if (namespaceActions.Length == 0)
                         {
                             SuggestedActionSet moduleSet = new SuggestedActionSet(
-                                "F# Suggested Module Names",
-                                moduleActions);
+                                categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                                title: "F# Suggested Module Names",
+                                actions: moduleActions);
 
-                            return new[] { moduleSet };
+                            return suggestedNameContainsNamespace
+                                ? new[] { moduleSet, GetWrappedModuleActionsSet(range, NAMESPACE_WORD, NameSegments, suggestedNameSegments) }
+                                : new[] { moduleSet };
                         }
 
                         if (namespaceActions.Length > 0)
                         {
                             SuggestedActionSet namespaceSet = new SuggestedActionSet(
-                                "F# Suggested Namespace Names",
-                                namespaceActions);
+                                categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                                title: "F# Suggested Namespace Names",
+                                actions: namespaceActions);
 
                             SuggestedActionSet moduleSet = new SuggestedActionSet(
-                                "F# Suggested Module Names",
-                                moduleActions);
+                                categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                                title: "F# Suggested Module Names",
+                                actions: moduleActions);
 
-                            return new[] { namespaceSet, moduleSet };
+                            return suggestedNameContainsNamespace
+                                ? new[] { namespaceSet, moduleSet, GetWrappedModuleActionsSet(range, NAMESPACE_WORD, NameSegments, suggestedNameSegments) }
+                                : new[] { namespaceSet, moduleSet };
                         }
 
                         return base.GetSuggestedActionSets(textBuffer, range, sourceFilePath, projectFilePath);

@@ -1,14 +1,11 @@
-﻿using System;
+﻿using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
-using FSharpNamespacer.Actions;
-using FSharpNamespacer.Models;
+using System.Net;
 using FSharpNamespacer.Utilities;
-using Microsoft.VisualStudio.Language.Intellisense;
+using Microsoft.VisualStudio.GraphModel.CodeSchema;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Operations;
-
-#nullable enable
 
 namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 {
@@ -16,7 +13,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
     {
         private sealed partial class AsyncSuggestedActionSource
         {
-            private abstract partial class SuggestedActionsBuilder
+            private abstract class SuggestedActionsBuilder
             {
                 //------------------------------------------------------
                 //
@@ -34,14 +31,13 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 #endregion Constants
 
-                private readonly BuilderType _state;
+                private readonly State _state;
 
-                private SuggestedActionsBuilder(BuilderType state, Span span, int versionNumber, int indentSize)
+                private SuggestedActionsBuilder(State state, Span span, int versionNumber)
                 {
                     _state = state;
                     Span = span;
                     VersionNumber = versionNumber;
-                    IndentSize = indentSize;
                 }
 
                 //------------------------------------------------------
@@ -52,17 +48,15 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 #region properties
 
-                internal bool IsNone => _state == BuilderType.None;
+                internal bool IsNone => _state == State.None;
 
-                internal bool IsNamespaceDetected => _state == BuilderType.NamespaceDetected;
+                internal bool IsNamespaceDetected => _state == State.NamespaceDetected;
 
-                internal bool IsModuleDetected => _state == BuilderType.ModuleDetected;
+                internal bool IsModuleDetected => _state == State.ModuleDetected;
 
                 internal Span Span { get; }
 
                 internal int VersionNumber { get; }
-
-                public int IndentSize { get; }
 
                 #endregion properties
 
@@ -108,11 +102,11 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                             return CreateNone(range);
                         }
 
-                        bool isInComment = range.Start > 0 && IsInComment(range.Start - 1, navigator);
+                        bool isInComment = IsInComment(range.Start - 1, navigator);
 
-                        if ((range.Start == 0 || !isInComment) && NameParser.TryGetNameSegments(navigator, range, running, out (Queue<(CodeCommentType, string)> nameSegments, bool hasEqualSign) result) && !result.hasEqualSign)
+                        if ((range.Start == 0 || !isInComment) && NameParser.TryGetNameSegments(navigator, range, running, out var result) && !result.hasEqualSign)
                         {
-                            return new ModuleDetected(range.Span, range.Snapshot.Version.VersionNumber, result.nameSegments, source._indentSize);
+                            return new ModuleDetected(range.Span, range.Snapshot.Version.VersionNumber, result.nameSegments);
                         }
                     }
                     else if (text == NAMESPACE_WORD)
@@ -125,11 +119,11 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                             return CreateNone(range);
                         }
 
-                        bool isInComment = range.Start > 0 && IsInComment(range.Start - 1, navigator);
+                        bool isInComment = IsInComment(range.Start - 1, navigator);
 
-                        if ((range.Start == 0 || !isInComment) && NameParser.TryGetNameSegments(navigator, range, running, out (Queue<(CodeCommentType, string)> nameSegments, bool hasEqualSign) result) && !result.hasEqualSign)
+                        if ((range.Start == 0 || !isInComment) && NameParser.TryGetNameSegments(navigator, range, running, out var result) && !result.hasEqualSign)
                         {
-                            return new NamespaceDetected(range.Span, range.Snapshot.Version.VersionNumber, result.nameSegments, source._indentSize);
+                            return new NamespaceDetected(range.Span, range.Snapshot.Version.VersionNumber, result.nameSegments);
                         }
                     }
 
@@ -138,9 +132,9 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 private static bool IsInComment(SnapshotPoint start, ITextStructureNavigator navigator)
                 {
-                    ITextSnapshot snapshot = start.Snapshot;
-                    ITextSnapshotLine currentLine = snapshot.GetLineFromPosition(start.Position);
-                    foreach (ITextSnapshotLine? line in snapshot.Lines.Where(l => l.LineNumber <= currentLine.LineNumber).Reverse())
+                    var snapshot = start.Snapshot;
+                    var currentLine = snapshot.GetLineFromPosition(start.Position);
+                    foreach (var line in snapshot.Lines.Where(l => l.LineNumber <= currentLine.LineNumber).Reverse())
                     {
                         if (line.Length < 2)
                         {
@@ -175,40 +169,6 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                 internal bool CorrespondsTo(SnapshotSpan range)
                     => Span == range.Span && range.Snapshot.Version.VersionNumber == VersionNumber;
 
-                internal virtual IEnumerable<SuggestedActionSet> GetSuggestedActionSets(
-                    ITextBuffer textBuffer,
-                    SnapshotSpan range,
-                    string sourceFilePath,
-                    string? projectFilePath
-                )
-                    => Enumerable.Empty<SuggestedActionSet>();
-
-                protected SuggestedActionSet GetWrappedModuleActionsSet(
-                    SnapshotSpan range,
-                    string originKeyword,
-                    Queue<(CodeCommentType, string)> originNameSegments,
-                    Queue<string> suggestedNameSegments
-                )
-                {
-                    ISuggestedAction[] wrappedModuleActions =
-                        suggestedNameSegments.Count > 1
-                            ? new[] {
-                                new WrapToModuleAction(
-                                    range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive),
-                                    originKeyword,
-                                    originNameSegments,
-                                    suggestedNameSegments,
-                                    IndentSize
-                                )
-                            }
-                            : Array.Empty<ISuggestedAction>();
-
-                    return new SuggestedActionSet(
-                        categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
-                        title: "F# Suggested Wrapped Module",
-                        actions: wrappedModuleActions);
-                }
-
                 //------------------------------------------------------
                 //
                 //  types
@@ -217,7 +177,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 #region types
 
-                private enum BuilderType
+                private enum State
                 {
                     None,
                     NamespaceDetected,
@@ -227,8 +187,30 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                 internal sealed class None : SuggestedActionsBuilder
                 {
                     public None(Span span, int versionNumber)
-                        : base(BuilderType.None, span, versionNumber, -1)
+                        : base(State.None, span, versionNumber)
                     { }
+                }
+
+                internal sealed class NamespaceDetected : SuggestedActionsBuilder
+                {
+                    public NamespaceDetected(Span span, int versionNumber, Queue<string> nameSegments)
+                        : base(State.NamespaceDetected, span, versionNumber)
+                    {
+                        NameSegments = nameSegments;
+                    }
+
+                    internal Queue<string> NameSegments { get; }
+                }
+
+                internal sealed class ModuleDetected : SuggestedActionsBuilder
+                {
+                    public ModuleDetected(Span span, int versionNumber, Queue<string> nameSegments)
+                        : base(State.ModuleDetected, span, versionNumber)
+                    {
+                        NameSegments = nameSegments;
+                    }
+
+                    internal Queue<string> NameSegments { get; }
                 }
 
                 #endregion types

@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using EnvDTE;
 using FSharpNamespacer.Models;
 using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -29,16 +30,16 @@ namespace FSharpNamespacer.Actions
 
         #region static
 
-        private static readonly SolidColorBrush _backgroundBrush;
-        private static readonly SolidColorBrush _nameBrush;
-        private static readonly SolidColorBrush _redBrush;
-        private static readonly SolidColorBrush _lightRedBrush;
-        private static readonly SolidColorBrush _greenBrush;
-        private static readonly SolidColorBrush _lightGreenBrush;
-        private static readonly SolidColorBrush _diffForegroundBrush;
-        private static readonly SolidColorBrush _commentBrush;
-        private static readonly SolidColorBrush _keywordBrush;
-        private static readonly SolidColorBrush _typeBrush;
+        protected static readonly SolidColorBrush _backgroundBrush;
+        protected static readonly SolidColorBrush _nameBrush;
+        protected static readonly SolidColorBrush _redBrush;
+        protected static readonly SolidColorBrush _lightRedBrush;
+        protected static readonly SolidColorBrush _greenBrush;
+        protected static readonly SolidColorBrush _lightGreenBrush;
+        protected static readonly SolidColorBrush _diffForegroundBrush;
+        protected static readonly SolidColorBrush _commentBrush;
+        protected static readonly SolidColorBrush _keywordBrush;
+        protected static readonly SolidColorBrush _typeBrush;
 
         static ChangeLineAction()
         {
@@ -85,13 +86,13 @@ namespace FSharpNamespacer.Actions
 
         #endregion static
 
-        private readonly ITrackingSpan _trackingSpan;
-        private readonly string _suggestedkeyword;
-        private readonly string _newName;
-        private readonly bool _isSuggestedModule;
-        private readonly string _comment;
-        private readonly string _originKeyword;
-        private readonly Queue<(CodeCommentType, string)> _originLine;
+        private readonly IEnumerable<string> _suggestedNameSegments;
+        protected readonly ITrackingSpan _trackingSpan;
+        protected readonly string _suggestedKeyword;
+        protected readonly bool _isSuggestedModule;
+        protected readonly string _comment;
+        protected readonly string _originKeyword;
+        protected readonly Queue<(CodeCommentType, string)> _originLine;
 
         public ChangeLineAction(
             ITrackingSpan trackingSpan,
@@ -154,17 +155,12 @@ namespace FSharpNamespacer.Actions
                       .Select(t => t.Item2);
 
             _trackingSpan = trackingSpan;
-            _suggestedkeyword = suggestedKeyword;
-
-            var name = String.Join(".", suggestedNameSegments);
-            _newName = name;
-
+            _suggestedKeyword = suggestedKeyword;
+            _suggestedNameSegments = suggestedNameSegments;
             _isSuggestedModule = suggestedKeyword == "module";
 
             var comment = String.Join(" ", commentSegments);
             _comment = comment;
-
-            DisplayText = $"{suggestedKeyword} {name} {comment}".TrimEnd();
         }
 
         //------------------------------------------------------
@@ -191,7 +187,20 @@ namespace FSharpNamespacer.Actions
 
         public bool HasActionSets { get; } = false;
 
-        public string DisplayText { get; }
+        private string? _displayText;
+        public virtual string DisplayText
+        {
+            get {
+                if (_displayText != null)
+                {
+                    return _displayText;
+                }
+
+                _displayText = $"{_suggestedKeyword} {NewName} {_comment}".TrimEnd();
+
+                return _displayText;
+            }
+        }
 
         public ImageMoniker IconMoniker { get; } = default;
 
@@ -247,7 +256,7 @@ namespace FSharpNamespacer.Actions
             return Task.FromResult<object?>(border);
         }
 
-        public void Invoke(CancellationToken cancellationToken)
+        public virtual void Invoke(CancellationToken cancellationToken)
         {
             _trackingSpan.TextBuffer.Replace(_trackingSpan.GetSpan(_trackingSpan.TextBuffer.CurrentSnapshot), DisplayText);
         }
@@ -271,16 +280,34 @@ namespace FSharpNamespacer.Actions
 
         #endregion ITelemetryIdProvider<Guid> implementation
 
-        protected virtual TextBlock GetExistingTextBlock()
+        private string? _newName;
+        private string NewName
         {
-            var existingTextBlock = new TextBlock
+            get
             {
-                Background = _redBrush,
+                if (_newName != null)
+                {
+                    return _newName;
+                }
+
+                _newName = String.Join(".", _suggestedNameSegments);
+                return _newName;
+            }
+        }
+
+        protected TextBlock GetTextBlock(Brush backgroundBrush)
+            => new TextBlock
+            {
+                Background = backgroundBrush,
                 Padding = new Thickness(0),
                 FontSize = 13,
                 FontFamily = new FontFamily("Consolas"),
                 FontWeight = FontWeights.ExtraLight,
             };
+
+        protected virtual TextBlock GetExistingTextBlock()
+        {
+            var existingTextBlock = GetTextBlock(_redBrush);
             existingTextBlock.Inlines.Add(new Run() { Text = "-", Foreground = _diffForegroundBrush, Background = _lightRedBrush });
             existingTextBlock.Inlines.Add(new Run() { Text = _originKeyword + ' ', Foreground = _keywordBrush });
 
@@ -345,42 +372,37 @@ namespace FSharpNamespacer.Actions
 
         protected virtual TextBlock GetReplacementTextBlock()
         {
-            var replacementTextBlock = new TextBlock
-            {
-                Background = _greenBrush,
-                Padding = new Thickness(0),
-                FontSize = 13,
-                FontFamily = new FontFamily("Consolas"),
-                FontWeight = FontWeights.ExtraLight,
-            };
+            var replacementTextBlock = GetTextBlock(_greenBrush);
             replacementTextBlock.Inlines.Add(new Run() { Text = "+", Foreground = _diffForegroundBrush, Background = _lightGreenBrush });
-            replacementTextBlock.Inlines.Add(new Run() { Text = _suggestedkeyword + ' ', Foreground = _keywordBrush });
+            replacementTextBlock.Inlines.Add(new Run() { Text = _suggestedKeyword + ' ', Foreground = _keywordBrush });
+
+            var newName = NewName;
 
             if (_isSuggestedModule)
             {
-                var dotInd = _newName.LastIndexOf(".");
-                if (dotInd >= 0 && dotInd < _newName.Length - 1)
+                var dotInd = newName.LastIndexOf(".");
+                if (dotInd >= 0 && dotInd < newName.Length - 1)
                 {
                     replacementTextBlock.Inlines.Add(new Run()
                     {
-                        Text = _newName.Substring(0, dotInd + 1),
+                        Text = newName.Substring(0, dotInd + 1),
                         Foreground = _nameBrush
                     });
 
                     replacementTextBlock.Inlines.Add(new Run()
                     {
-                        Text = _newName.Substring(dotInd + 1) + ' ',
+                        Text = newName.Substring(dotInd + 1) + ' ',
                         Foreground = _typeBrush
                     });
                 }
                 else
                 {
-                    replacementTextBlock.Inlines.Add(new Run() { Text = _newName + ' ', Foreground = _typeBrush });
+                    replacementTextBlock.Inlines.Add(new Run() { Text = newName + ' ', Foreground = _typeBrush });
                 }
             }
             else
             {
-                replacementTextBlock.Inlines.Add(new Run() { Text = _newName + ' ', Foreground = _nameBrush });
+                replacementTextBlock.Inlines.Add(new Run() { Text = newName + ' ', Foreground = _nameBrush });
             }
             replacementTextBlock.Inlines.Add(new Run() { Text = _comment, Foreground = _commentBrush });
             return replacementTextBlock;

@@ -1,8 +1,5 @@
 ﻿using System;
 using System.ComponentModel.Composition;
-using System.IO;
-using System.Threading.Tasks;
-using System.Windows.Controls;
 using EnvDTE;
 using Microsoft;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -11,13 +8,12 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
-using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.Utilities;
 
 namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 {
     [Export(typeof(ISuggestedActionsSourceProvider))]
-    // [Export(typeof(ModuleSuggestedActionSourceProvider))]
+    [Export(typeof(ModuleSuggestedActionSourceProvider))]
     [Name("Module Suggested Actions")]
     [ContentType("F#")]
     internal sealed partial class ModuleSuggestedActionSourceProvider : ISuggestedActionsSourceProvider
@@ -29,7 +25,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
         private ISuggestedActionCategoryRegistryService SuggestedActionCategoryRegistryService { get; }
 
         private IClassifierAggregatorService ClassifierAggregatorService { get; }
-        
+
         private IServiceProvider ServiceProvider { get; }
 
         [ImportingConstructor]
@@ -64,29 +60,40 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
             Requires.NotNull(textView, nameof(textView));
             Requires.NotNull(textBuffer, nameof(textView));
 
-            if (!TextDocumentFactoryService.TryGetTextDocument(textBuffer, out var textDocument))
+            if (!TextDocumentFactoryService.TryGetTextDocument(textBuffer, out ITextDocument? textDocument))
             {
                 return null;
             }
 
             ThreadHelper.ThrowIfNotOnUIThread();
-            
+
             DTE? dte = ServiceProvider.GetService(typeof(DTE)) as DTE;
             Assumes.Present(dte);
 
-            var projectFileFullPath = dte.ActiveDocument?.ProjectItem?.ContainingProject.FileName;
+            if (dte.ActiveDocument is null)
+            {
+                return null;
+            }
+
+            string? projectFileFullPath = dte.ActiveDocument.ProjectItem?.ContainingProject.FileName;
             // FileName
             // var sourceFile = dte.ActiveDocument?.Name;
             //var sourceFileFullPath = textDocument.FilePath;
+
+            Document doc = dte.ActiveDocument;
+
+            int tabSize = doc.TabSize;
+            int indentSize = doc.IndentSize;
 
             return new AsyncSuggestedActionSource(
                 this,
                 textView,
                 textBuffer,
                 textDocument,
-                projectFileFullPath);
+                projectFileFullPath,
+                indentSize);
         }
 
-        #nullable restore
+#nullable restore
     }
 }

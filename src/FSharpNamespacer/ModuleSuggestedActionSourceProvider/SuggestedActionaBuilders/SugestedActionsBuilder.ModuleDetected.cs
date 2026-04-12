@@ -1,14 +1,11 @@
 ﻿using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using FSharpNamespacer.Actions;
 using FSharpNamespacer.Models;
 using FSharpNamespacer.Utilities;
-using Microsoft.VisualStudio.GraphModel.CodeSchema;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Operations;
 
 #nullable enable
 
@@ -26,8 +23,8 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                 /// </summary>
                 internal sealed class ModuleDetected : SuggestedActionsBuilder
                 {
-                    public ModuleDetected(Span span, int versionNumber, Queue<(CodeCommentType, string)> nameSegments)
-                        : base(BuilderType.ModuleDetected, span, versionNumber)
+                    public ModuleDetected(Span span, int versionNumber, Queue<(CodeCommentType, string)> nameSegments, int indentSize)
+                        : base(BuilderType.ModuleDetected, span, versionNumber, indentSize)
                     {
                         NameSegments = nameSegments;
                     }
@@ -53,29 +50,38 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                         bool isSame = suggestedNameSegments.SequenceEqual(
                             NameSegments.Where(t => t.Item1 == CodeCommentType.Code).Select(t => t.Item2));
 
-                        var namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
-                        var moduleActions = GetModuleSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+                        ISuggestedAction[] namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+                        ISuggestedAction[] moduleActions = GetModuleSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+
+                        bool suggestedNameContainsNamespace = suggestedNameSegments.Count > 1;
 
                         if (moduleActions.Length == 0)
                         {
                             SuggestedActionSet namespaceSet = new SuggestedActionSet(
-                                "F# Suggested Namespace Names",
-                                namespaceActions);
+                                categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                                title: "F# Suggested Namespace Names",
+                                actions: namespaceActions);
 
-                            return new[] { namespaceSet };
+                            return suggestedNameContainsNamespace
+                                ? new[] { namespaceSet, GetWrappedModuleActionsSet(range, MODULE_WORD, NameSegments, suggestedNameSegments) }
+                                : new[] { namespaceSet };
                         }
 
                         if (moduleActions.Length > 0)
                         {
                             SuggestedActionSet moduleSet = new SuggestedActionSet(
-                                "F# Suggested Module Names",
-                                moduleActions);
+                                categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                                title: "F# Suggested Module Names",
+                                actions: moduleActions);
 
                             SuggestedActionSet namespaceSet = new SuggestedActionSet(
-                                "F# Suggested Namespace Names",
-                                namespaceActions);
+                                categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                                title: "F# Suggested Namespace Names",
+                                actions: namespaceActions);
 
-                            return new[] { namespaceSet, moduleSet };
+                            return suggestedNameContainsNamespace
+                                ? new[] { namespaceSet, moduleSet, GetWrappedModuleActionsSet(range, MODULE_WORD, NameSegments, suggestedNameSegments) }
+                                : new[] { namespaceSet, moduleSet };
                         }
 
                         return base.GetSuggestedActionSets(textBuffer, range, sourceFilePath, projectFilePath);
@@ -104,7 +110,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                         bool isSame
                     )
                     {
-                        var trackingSpan = range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive);
+                        ITrackingSpan trackingSpan = range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive);
 
                         // change only keyword
                         yield return new ChangeLineAction(
