@@ -49,21 +49,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Actions\ChangeLineAction.cs" />
-    <Compile Include="Actions\ChangeToNamespaceAction.cs" />
-    <Compile Include="Actions\ChangeToSuggestedModuleAction.cs" />
-    <Compile Include="Actions\ChangeToSuggestedModuleInsteadNamespaceAction.cs" />
-    <Compile Include="Actions\ChangeToSuggestedNamespaceAction.cs" />
-    <Compile Include="Actions\ChangeToSuggestedNamespaceInsteadModuleAction.cs" />
-    <Compile Include="Actions\FsScopeActionBaseEqualityComparer.cs" />
     <Compile Include="Actions\WrapToModuleAction.cs" />
     <Compile Include="Models\CodeCommentType.cs" />
-    <Compile Include="Models\RangeLine.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\AsyncSuggestedActionSource.cs" />
-    <Compile Include="Actions\FsScopeActionBase.cs" />
-    <Compile Include="Models\FsModuleOrNamespace.cs" />
-    <Compile Include="Models\IFsFileRootScope.cs" />
-    <Compile Include="Models\FsFileRootScope.cs" />
-    <Compile Include="ModuleSuggestedActionSourceProvider\AsyncSuggestedActionSource.Privates.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\ModuleSuggestedActionSourceProvider.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.ModuleDetected.cs" />
