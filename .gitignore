@@ -453,3 +453,6 @@ $RECYCLE.BIN/
 !.vscode/launch.json
 !.vscode/extensions.json
 /nuget.config
+/docs/gif-build.md
+/images/pot-player-atl-c-settings.jpg
+/video/Screen Capture_20260414_121340.gif
