@@ -62,7 +62,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                         if (namespaceActions.Length == 0)
                         {
                             SuggestedActionSet moduleSet = new SuggestedActionSet(
-                                categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                                categoryName: SuggestedActionSetCategoryName,
                                 title: "F# Suggested Module Names",
                                 actions: moduleActions);
 
@@ -74,12 +74,12 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                         if (namespaceActions.Length > 0)
                         {
                             SuggestedActionSet namespaceSet = new SuggestedActionSet(
-                                categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                                categoryName: SuggestedActionSetCategoryName,
                                 title: "F# Suggested Namespace Names",
                                 actions: namespaceActions);
 
                             SuggestedActionSet moduleSet = new SuggestedActionSet(
-                                categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                                categoryName: SuggestedActionSetCategoryName,
                                 title: "F# Suggested Module Names",
                                 actions: moduleActions);
 

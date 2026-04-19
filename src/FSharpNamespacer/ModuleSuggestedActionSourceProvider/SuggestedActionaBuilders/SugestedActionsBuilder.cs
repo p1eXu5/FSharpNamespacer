@@ -138,11 +138,11 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 #endregion static
 
-                private readonly BuilderType _state;
+                private readonly BuilderType _builderType;
 
                 private SuggestedActionsBuilder(BuilderType state, Span span, int versionNumber, int indentSize)
                 {
-                    _state = state;
+                    _builderType = state;
                     Span = span;
                     VersionNumber = versionNumber;
                     IndentSize = indentSize;
@@ -156,17 +156,21 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 #region properties
 
-                internal bool IsNone => _state == BuilderType.None;
+                internal bool IsNone => _builderType == BuilderType.None;
 
-                internal bool IsNamespaceDetected => _state == BuilderType.NamespaceDetected;
+                internal bool IsNamespaceDetected => _builderType == BuilderType.NamespaceDetected;
 
-                internal bool IsModuleDetected => _state == BuilderType.ModuleDetected;
+                internal bool IsModuleDetected => _builderType == BuilderType.ModuleDetected;
 
                 internal Span Span { get; }
 
                 internal int VersionNumber { get; }
 
                 public int IndentSize { get; }
+
+                protected string SuggestedActionSetCategoryName => PredefinedSuggestedActionCategoryNames.Any;
+
+                public string Tag => _builderType.ToString();
 
                 #endregion properties
 
@@ -210,7 +214,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                             : Array.Empty<ISuggestedAction>();
 
                     return new SuggestedActionSet(
-                        categoryName: PredefinedSuggestedActionCategoryNames.Refactoring,
+                        categoryName: SuggestedActionSetCategoryName,
                         title: "F# Suggested Wrapped Module",
                         actions: wrappedModuleActions);
                 }
