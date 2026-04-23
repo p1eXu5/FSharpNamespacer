@@ -140,11 +140,6 @@ namespace FSharpNamespacer.Actions
                 throw new ArgumentNullException(nameof(originLine));
             }
 
-            if (originLine.Count == 0)
-            {
-                throw new ArgumentException("originLine must contain items.");
-            }
-
             _originLine = originLine;
             _originKeyword = originKeyword;
 
@@ -217,33 +212,41 @@ namespace FSharpNamespacer.Actions
 
         public Task<object?> GetPreviewAsync(CancellationToken cancellationToken)
         {
-            TextBlock existingTextBlock = GetExistingTextBlock();
+            TextBlock? existingTextBlock = GetExistingTextBlock();
             TextBlock replacementTextBlock = GetReplacementTextBlock();
 
             StackPanel stackPanel = new StackPanel()
             {
                 Orientation = Orientation.Vertical,
             };
-            stackPanel.Children.Add(new TextBlock
+
+            if (existingTextBlock != null)
             {
-                Background = Brushes.Transparent,
-                Padding = new Thickness(0),
-                FontSize = 13,
-                FontFamily = new FontFamily("Consolas"),
-                FontWeight = FontWeights.ExtraLight,
-                Text = " ...",
-            });
-            stackPanel.Children.Add(existingTextBlock);
-            stackPanel.Children.Add(replacementTextBlock);
-            stackPanel.Children.Add(new TextBlock
+                stackPanel.Children.Add(new TextBlock
+                {
+                    Background = Brushes.Transparent,
+                    Padding = new Thickness(0),
+                    FontSize = 13,
+                    FontFamily = new FontFamily("Consolas"),
+                    FontWeight = FontWeights.ExtraLight,
+                    Text = " ...",
+                });
+                stackPanel.Children.Add(existingTextBlock);
+                stackPanel.Children.Add(replacementTextBlock);
+                stackPanel.Children.Add(new TextBlock
+                {
+                    Background = Brushes.Transparent,
+                    Padding = new Thickness(0),
+                    FontSize = 13,
+                    FontFamily = new FontFamily("Consolas"),
+                    FontWeight = FontWeights.ExtraLight,
+                    Text = " ...",
+                });
+            }
+            else
             {
-                Background = Brushes.Transparent,
-                Padding = new Thickness(0),
-                FontSize = 13,
-                FontFamily = new FontFamily("Consolas"),
-                FontWeight = FontWeights.ExtraLight,
-                Text = " ...",
-            });
+                stackPanel.Children.Add(replacementTextBlock);
+            }
 
             Border border = new Border
             {
@@ -305,19 +308,21 @@ namespace FSharpNamespacer.Actions
                 FontWeight = FontWeights.ExtraLight,
             };
 
-        protected virtual TextBlock GetExistingTextBlock()
+        protected virtual TextBlock? GetExistingTextBlock()
         {
+            using Queue<(CodeCommentType, string)>.Enumerator enumerator = _originLine.GetEnumerator();
+            if (!enumerator.MoveNext())
+            {
+                return null;
+            }
+
             TextBlock existingTextBlock = GetTextBlock(_redBrush);
             existingTextBlock.Inlines.Add(new Run() { Text = "-", Foreground = _diffForegroundBrush, Background = _lightRedBrush });
             existingTextBlock.Inlines.Add(new Run() { Text = _originKeyword + ' ', Foreground = _keywordBrush });
 
+            bool isLastCode = false;
             (CodeCommentType, string) codeComment;
             int i = 0;
-
-            using Queue<(CodeCommentType, string)>.Enumerator enumerator = _originLine.GetEnumerator();
-            enumerator.MoveNext();
-
-            bool isLastCode = false;
 
             codeComment = enumerator.Current;
             switch (codeComment.Item1)

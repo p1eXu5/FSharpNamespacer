@@ -44,6 +44,11 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 internal static SuggestedActionsBuilder Create(AsyncSuggestedActionSource source, SnapshotSpan range)
                 {
+                    if (range.Length == 0 && range.Snapshot.LineCount == 1)
+                    {
+                        return new EmptyFileDetected(range.Span, range.Snapshot.Version.VersionNumber, source._indentSize);
+                    }
+
                     if (range.Length < MODULE_WORD_LENGTH + 2)
                     {
                         return CreateNone(range);
@@ -78,7 +83,9 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                         bool isInComment = range.Start > 0 && IsInComment(range.Start - 1, navigator);
 
-                        if ((range.Start == 0 || !isInComment) && NameParser.TryGetNameSegments(navigator, range, running, out (Queue<(CodeCommentType, string)> nameSegments, bool hasEqualSign) result) && !result.hasEqualSign)
+                        if ((range.Start == 0 || !isInComment)
+                            && NameParser.TryGetNameSegments(navigator, range, running, out (Queue<(CodeCommentType, string)> nameSegments, bool hasEqualSign) result)
+                            && !result.hasEqualSign)
                         {
                             return new ModuleDetected(range.Span, range.Snapshot.Version.VersionNumber, result.nameSegments, source._indentSize);
                         }
@@ -95,7 +102,9 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                         bool isInComment = range.Start > 0 && IsInComment(range.Start - 1, navigator);
 
-                        if ((range.Start == 0 || !isInComment) && NameParser.TryGetNameSegments(navigator, range, running, out (Queue<(CodeCommentType, string)> nameSegments, bool hasEqualSign) result) && !result.hasEqualSign)
+                        if ((range.Start == 0 || !isInComment)
+                            && NameParser.TryGetNameSegments(navigator, range, running, out (Queue<(CodeCommentType, string)> nameSegments, bool hasEqualSign) result)
+                            && !result.hasEqualSign)
                         {
                             return new NamespaceDetected(range.Span, range.Snapshot.Version.VersionNumber, result.nameSegments, source._indentSize);
                         }
@@ -185,6 +194,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                 internal bool CorrespondsTo(SnapshotSpan range)
                     => Span == range.Span && range.Snapshot.Version.VersionNumber == VersionNumber;
 
+                /// <returns>Empty enumerable of <see cref="SuggestedActionSet"/>.</returns>
                 internal virtual IEnumerable<SuggestedActionSet> GetSuggestedActionSets(
                     ITextBuffer textBuffer,
                     SnapshotSpan range,
@@ -233,7 +243,8 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                 {
                     None,
                     NamespaceDetected,
-                    ModuleDetected
+                    ModuleDetected,
+                    EmptyFileDetected
                 }
 
                 #endregion BuilderType enum

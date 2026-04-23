@@ -9,6 +9,20 @@ namespace FSharpNamespacer.Utilities
 {
     internal static class NameParser
     {
+        /// <summary>
+        /// Attempts to parse and extract module/namespace name segments and comment information from the specified text range using the
+        /// provided <paramref name="navigator"/>.
+        /// </summary>
+        /// <remarks>The method processes the text range to identify <see cref="CodeCommentType.Code"/>, <see cref="CodeCommentType.InlineComment"/>
+        /// and <see cref="CodeCommentType.TerminateComment"/> segments. The <paramref name="result"/>
+        /// preserves the order of discovered segments, and the hasEqualSign flag indicates if an assignment operator
+        /// was found during parsing.</remarks>
+        /// <param name="navigator">The text structure navigator used to traverse and identify word or token boundaries within the text.</param>
+        /// <param name="range">The span of text to analyze for name segments and comments.</param>
+        /// <param name="running">The initial text extent from which parsing begins within the specified range.</param>
+        /// <param name="result">When this method returns, contains a tuple with a queue of parsed name segments and a value indicating
+        /// whether an equal sign was encountered, if parsing was successful.</param>
+        /// <returns>true if one or more name segments were successfully parsed; otherwise, false.</returns>
         internal static bool TryGetNameSegments(
             ITextStructureNavigator navigator,
             SnapshotSpan range,

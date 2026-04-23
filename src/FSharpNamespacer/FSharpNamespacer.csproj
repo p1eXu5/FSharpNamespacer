@@ -54,6 +54,7 @@
     <Compile Include="ModuleSuggestedActionSourceProvider\AsyncSuggestedActionSource.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\ModuleSuggestedActionSourceProvider.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.cs" />
+    <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.EmptyFileDetected.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.ModuleDetected.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.NamespaceDetected.cs" />
     <Compile Include="ModuleSuggestedActionSourceProvider\SuggestedActionaBuilders\SugestedActionsBuilder.None.cs" />
