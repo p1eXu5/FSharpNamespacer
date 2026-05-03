@@ -1,7 +1,9 @@
 ﻿# Changelog
 
-These are the changes to each version that has been released
-on the official Visual Studio extension gallery
+## New in v0.2.2 (Released 2026/05/03)
+
+- Added wrap type action
+- To show suggestions in an empty (newly created) *.fs file, type any character
 
 ## New in v0.2.1 (Released 2026/04/23)
 

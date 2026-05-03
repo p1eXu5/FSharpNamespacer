@@ -36,6 +36,8 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                         string sourceFilePath,
                         string? projectFilePath)
                     {
+                        LogUtilities.LogDebug("Constructing suggestions...");
+
                         Queue<string> suggestedNameSegments = PathUtilities.GetRelativePathSegments(projectFilePath, sourceFilePath);
 
                         ISuggestedAction[] namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments).ToArray();
@@ -53,9 +55,18 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                             title: "F# Suggested Namespace Names",
                             actions: namespaceActions);
 
-                        return suggestedNameContainsNamespace
-                            ? new[] { namespaceSet, moduleSet, GetWrappedModuleActionsSet(range, MODULE_WORD, NameSegments, suggestedNameSegments) }
+                        var suggestions = suggestedNameContainsNamespace
+                            ? new[] {
+                                namespaceSet,
+                                moduleSet,
+                                GetWrappedModuleActionsSet(range, MODULE_WORD, NameSegments, suggestedNameSegments),
+                                GetWrappedTypeActionsSet(range, MODULE_WORD, NameSegments, suggestedNameSegments)
+                            }
                             : new[] { namespaceSet, moduleSet };
+
+                        LogUtilities.LogDebug("Suggestions have been constructed.");
+
+                        return suggestions;
                     }
 
                     private IEnumerable<ISuggestedAction> GetModuleSuggestedActions(

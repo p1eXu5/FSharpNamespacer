@@ -44,7 +44,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 internal static SuggestedActionsBuilder Create(AsyncSuggestedActionSource source, SnapshotSpan range)
                 {
-                    if (range.Length == 0 && range.Snapshot.LineCount == 1)
+                    if (range.Length <= 1 && range.Snapshot.LineCount == 1)
                     {
                         return new EmptyFileDetected(range.Span, range.Snapshot.Version.VersionNumber, source._indentSize);
                     }
@@ -201,7 +201,10 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                     string sourceFilePath,
                     string? projectFilePath
                 )
-                    => Enumerable.Empty<SuggestedActionSet>();
+                {
+                    LogUtilities.LogDebug("Returning empty suggestions...");
+                    return Enumerable.Empty<SuggestedActionSet>();
+                }
 
                 protected SuggestedActionSet GetWrappedModuleActionsSet(
                     SnapshotSpan range,
@@ -226,6 +229,32 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                     return new SuggestedActionSet(
                         categoryName: SuggestedActionSetCategoryName,
                         title: "F# Suggested Wrapped Module",
+                        actions: wrappedModuleActions);
+                }
+
+                protected SuggestedActionSet GetWrappedTypeActionsSet(
+                    SnapshotSpan range,
+                    string originKeyword,
+                    Queue<(CodeCommentType, string)> originNameSegments,
+                    Queue<string> suggestedNameSegments
+                )
+                {
+                    ISuggestedAction[] wrappedModuleActions =
+                        suggestedNameSegments.Count > 1
+                            ? new[] {
+                                new WrapToTypeAction(
+                                    range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive),
+                                    originKeyword,
+                                    originNameSegments,
+                                    suggestedNameSegments,
+                                    IndentSize
+                                )
+                            }
+                            : Array.Empty<ISuggestedAction>();
+
+                    return new SuggestedActionSet(
+                        categoryName: SuggestedActionSetCategoryName,
+                        title: "F# Suggested Wrapped Type",
                         actions: wrappedModuleActions);
                 }
 

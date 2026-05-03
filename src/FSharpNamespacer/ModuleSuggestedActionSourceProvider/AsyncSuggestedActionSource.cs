@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FSharpNamespacer.Utilities;
 using Microsoft;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.Shell;
@@ -82,7 +84,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 if (!requestedActionCategories.Contains(PredefinedSuggestedActionCategoryNames.Refactoring))
                 {
-                    Debug.WriteLine("[FSharpNamespacer.HasSuggestedActionsAsync] Suggested action category set does not contain Refactoring category.");
+                    LogUtilities.LogDebug("Suggested action category set does not contain Refactoring category.");
                     return false;
                 }
 
@@ -90,11 +92,11 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 if (builder.IsNone)
                 {
-                    Debug.WriteLine("[FSharpNamespacer.HasSuggestedActionsAsync] Suggested action builder is None.");
+                    Debug.WriteLine("Suggested action builder is None.");
                     return false;
                 }
 
-                Debug.WriteLine($"[FSharpNamespacer.HasSuggestedActionsAsync] Suggested action builder is {builder.Tag}.");
+                LogUtilities.LogDebug($"Suggested action builder is {builder.Tag}.");
                 return true;
             }
 
@@ -106,7 +108,7 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
             {
                 if (!requestedActionCategories.Contains(PredefinedSuggestedActionCategoryNames.Refactoring))
                 {
-                    Debug.WriteLine("[FSharpNamespacer.GetSuggestedActions] Suggested action category set does not contain Refactoring category.");
+                    LogUtilities.LogDebug("Suggested action category set does not contain Refactoring category.");
                     return Enumerable.Empty<SuggestedActionSet>();
                 }
 
@@ -114,11 +116,11 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                 if (builder.IsNone)
                 {
-                    Debug.WriteLine("[FSharpNamespacer.GetSuggestedActions] Suggested action builder is None.");
+                    LogUtilities.LogDebug("Suggested action builder is None.");
                     return Enumerable.Empty<SuggestedActionSet>();
                 }
 
-                Debug.WriteLine($"[FSharpNamespacer.GetSuggestedActions] Suggested action builder is {builder.Tag}.");
+                LogUtilities.LogDebug($"Suggested action builder is {builder.Tag}.");
 
                 return builder.GetSuggestedActionSets(
                     _textBuffer,
