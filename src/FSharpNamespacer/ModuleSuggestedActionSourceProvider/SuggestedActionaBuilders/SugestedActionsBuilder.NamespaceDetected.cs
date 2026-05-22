@@ -49,17 +49,44 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                     {
                         LogUtilities.LogDebug("Constructing suggestions...");
 
-                        Queue<string> suggestedNameSegments = PathUtilities.GetRelativePathSegments(projectFilePath, sourceFilePath);
+                        if (!TryGetSuggestedNameSegments(sourceFilePath, projectFilePath, out var suggestedNameSegments))
+                        {
+                            return Enumerable.Empty<SuggestedActionSet>();
+                        }
+
                         bool isSame = suggestedNameSegments.SequenceEqual(
                             NameSegments.Where(t => t.Item1 == CodeCommentType.Code).Select(t => t.Item2));
+                        
+                        bool suggestedNameContainsNamespace = suggestedNameSegments.Count > 1;
+
+                        bool isSame1 =
+                            suggestedNameContainsNamespace
+                            && !isSame
+                            && suggestedNameSegments.Take(suggestedNameSegments.Count - 1).SequenceEqual(
+                                NameSegments.Where(t => t.Item1 == CodeCommentType.Code).Select(t => t.Item2));
 
                         Queue<string> suggestedOwnNameSegments = PathUtilities.GetRelativePathSegments(null, sourceFilePath);
                         // TODO: implement default suggested module name
 
-                        ISuggestedAction[] moduleActions = GetModuleSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
-                        ISuggestedAction[] namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments, isSame).ToArray();
+                        ISuggestedAction[] moduleActions =
+                            GetModuleSuggestedActions(
+                                range,
+                                suggestedNameSegments,
+                                isSame,
+                                isSame1,
+                                suggestedNameContainsNamespace
+                            )
+                            .ToArray();
 
-                        bool suggestedNameContainsNamespace = suggestedNameSegments.Count > 1;
+                        ISuggestedAction[] namespaceActions =
+                            GetNamespaceSuggestedActions(
+                                range,
+                                suggestedNameSegments,
+                                isSame,
+                                isSame1,
+                                suggestedNameContainsNamespace
+                            )
+                            .ToArray();
 
                         if (namespaceActions.Length == 0)
                         {
@@ -109,7 +136,9 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                     private IEnumerable<ISuggestedAction> GetNamespaceSuggestedActions(
                         SnapshotSpan range,
                         Queue<string> suggestedNameSegments,
-                        bool isSame
+                        bool isSame,
+                        bool isSame1,
+                        bool suggestedNameContainsNamespace
                     )
                     {
                         if (!isSame)
@@ -121,17 +150,29 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                                 suggestedNameSegments
                             );
                         }
+
+                        if (!isSame1 && suggestedNameContainsNamespace)
+                        {
+                            yield return new ChangeLineAction(
+                                range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive),
+                                NAMESPACE_WORD,
+                                NameSegments,
+                                suggestedNameSegments.Take(suggestedNameSegments.Count - 1)
+                            );
+                        }
                     }
 
                     private IEnumerable<ISuggestedAction> GetModuleSuggestedActions(
                         SnapshotSpan range,
                         Queue<string> suggestedNameSegments,
-                        bool isSame
+                        bool isSame,
+                        bool isSame1,
+                        bool suggestedNameContainsNamespace
                     )
                     {
                         ITrackingSpan trackingSpan = range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive);
 
-                        // change only keyword
+                        // replace namespace with module
                         yield return new ChangeLineAction(
                             trackingSpan,
                             NAMESPACE_WORD,
@@ -146,6 +187,16 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                                 NameSegments,
                                 MODULE_WORD,
                                 suggestedNameSegments);
+                        }
+
+                        if (!isSame1 && suggestedNameSegments.Count > 2)
+                        {
+                            yield return new ChangeLineAction(
+                                trackingSpan,
+                                NAMESPACE_WORD,
+                                NameSegments,
+                                MODULE_WORD,
+                                suggestedNameSegments.Take(suggestedNameSegments.Count - 1));
                         }
                     }
                 }

@@ -38,12 +38,15 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                     {
                         LogUtilities.LogDebug("Constructing suggestions...");
 
-                        Queue<string> suggestedNameSegments = PathUtilities.GetRelativePathSegments(projectFilePath, sourceFilePath);
-
-                        ISuggestedAction[] namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments).ToArray();
-                        ISuggestedAction[] moduleActions = GetModuleSuggestedActions(range, suggestedNameSegments).ToArray();
+                        if (!TryGetSuggestedNameSegments(sourceFilePath, projectFilePath, out var suggestedNameSegments))
+                        {
+                            return Enumerable.Empty<SuggestedActionSet>();
+                        }
 
                         bool suggestedNameContainsNamespace = suggestedNameSegments.Count > 1;
+
+                        ISuggestedAction[] namespaceActions = GetNamespaceSuggestedActions(range, suggestedNameSegments, suggestedNameContainsNamespace).ToArray();
+                        ISuggestedAction[] moduleActions = GetModuleSuggestedActions(range, suggestedNameSegments, suggestedNameContainsNamespace).ToArray();
 
                         SuggestedActionSet moduleSet = new SuggestedActionSet(
                             categoryName: SuggestedActionSetCategoryName,
@@ -71,7 +74,8 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
 
                     private IEnumerable<ISuggestedAction> GetModuleSuggestedActions(
                         SnapshotSpan range,
-                        Queue<string> suggestedNameSegments
+                        Queue<string> suggestedNameSegments,
+                        bool suggestedNameContainsNamespace
                     )
                     {
                         ITrackingSpan trackingSpan = range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive);
@@ -83,22 +87,42 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                             MODULE_WORD,
                             suggestedNameSegments
                         );
+
+                        if (suggestedNameSegments.Count > 2)
+                        {
+                            yield return new ChangeLineAction(
+                                trackingSpan,
+                                string.Empty,
+                                NameSegments,
+                                MODULE_WORD,
+                                suggestedNameSegments.Take(suggestedNameSegments.Count - 1));
+                        }
                     }
 
                     private IEnumerable<ISuggestedAction> GetNamespaceSuggestedActions(
                         SnapshotSpan range,
-                        Queue<string> suggestedNameSegments
+                        Queue<string> suggestedNameSegments,
+                        bool suggestedNameContainsNamespace
                     )
                     {
                         ITrackingSpan trackingSpan = range.Snapshot.CreateTrackingSpan(range.Span, SpanTrackingMode.EdgeExclusive);
 
-                        // change only keyword
                         yield return new ChangeLineAction(
                             trackingSpan,
                             string.Empty,
                             NameSegments,
                             NAMESPACE_WORD,
                             suggestedNameSegments);
+
+                        if (suggestedNameSegments.Count > 1)
+                        {
+                            yield return new ChangeLineAction(
+                                trackingSpan,
+                                string.Empty,
+                                NameSegments,
+                                NAMESPACE_WORD,
+                                suggestedNameSegments.Take(suggestedNameSegments.Count - 1));
+                        }
                     }
                 }
             }

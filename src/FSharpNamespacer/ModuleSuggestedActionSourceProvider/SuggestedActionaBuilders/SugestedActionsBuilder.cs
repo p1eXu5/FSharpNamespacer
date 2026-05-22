@@ -84,10 +84,19 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                         bool isInComment = range.Start > 0 && IsInComment(range.Start - 1, navigator);
 
                         if ((range.Start == 0 || !isInComment)
-                            && NameParser.TryGetNameSegments(navigator, range, running, out (Queue<(CodeCommentType, string)> nameSegments, bool hasEqualSign) result)
+                            && NameParser.TryGetNameSegments(
+                                navigator,
+                                range,
+                                running,
+                                out (Queue<(CodeCommentType, string)> nameSegments, bool hasEqualSign) result
+                            )
                             && !result.hasEqualSign)
                         {
-                            return new ModuleDetected(range.Span, range.Snapshot.Version.VersionNumber, result.nameSegments, source._indentSize);
+                            return new ModuleDetected(
+                                range.Span,
+                                range.Snapshot.Version.VersionNumber,
+                                result.nameSegments,
+                                source._indentSize);
                         }
                     }
                     else if (text == NAMESPACE_WORD)
@@ -256,6 +265,19 @@ namespace FSharpNamespacer.ModuleSuggestedActionSourceProvider
                         categoryName: SuggestedActionSetCategoryName,
                         title: "F# Suggested Wrapped Type",
                         actions: wrappedModuleActions);
+                }
+
+                protected bool TryGetSuggestedNameSegments(string sourceFilePath, string? projectFilePath, out Queue<string> suggestedNameSegments)
+                {
+                    suggestedNameSegments = PathUtilities.GetRelativePathSegments(projectFilePath, sourceFilePath);
+
+                    if (suggestedNameSegments.Count == 0)
+                    {
+                        LogUtilities.LogDebug("Suggested name segments do not contain any segment.");
+                        return false;
+                    }
+
+                    return true;
                 }
 
                 #endregion methods
